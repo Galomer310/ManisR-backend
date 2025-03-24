@@ -1,21 +1,14 @@
-// backend/src/controllers/CodeController.ts
-
 import { Request, Response } from "express";
 import { randomInt } from "crypto";
 import redisClient from "../config/redisClient";
 import nodemailer from "nodemailer";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import pool from "../config/database"; // Import pool for DB queries
 
 dotenv.config({ path: "../.env" });
 
-// In-memory store to simulate Redis when using the dummy client.
-const simulatedCodes: { [email: string]: string } = {};
-
-/**
- * Create a Nodemailer transporter using SMTP credentials.
- * For testing, Ethereal Email is used.
- */
+// Configure Nodemailer transporter (using Ethereal for testing)
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT) || 587,
@@ -26,12 +19,11 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// In-memory store to simulate Redis when using the dummy client.
+const simulatedCodes: { [email: string]: string } = {};
+
 /**
  * Sends a verification code to the provided email.
- * - Generates a 6-digit code.
- * - Stores it in Redis or in a simulated in-memory store if using "dummy".
- * - Sends the code via email using Nodemailer.
- * - Returns the code in the response (for testing purposes).
  */
 export const sendCode = async (req: Request, res: Response) => {
   try {
@@ -44,7 +36,7 @@ export const sendCode = async (req: Request, res: Response) => {
     // Generate a 6-digit code
     const code = String(randomInt(100000, 1000000));
     console.log(`Generated code: ${code}`);
-    const expirySeconds = 300;
+    const expirySeconds = 300; // 5 minutes
 
     if ((process.env.REDIS_URL || "").trim() === "dummy") {
       simulatedCodes[email] = code;
@@ -63,13 +55,14 @@ export const sendCode = async (req: Request, res: Response) => {
 
     console.log("Mail options:", mailOptions);
 
+    // Send the email
     const info = await transporter.sendMail(mailOptions);
     console.log(`Email sent: ${info.messageId}`);
     console.log(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
 
     return res.status(200).json({
       message: "Verification code sent via email (simulated)",
-      code, // For testing only!
+      code, // For testing; remove this in production.
     });
   } catch (err) {
     console.error("Error sending email via Nodemailer:", err);
@@ -79,9 +72,8 @@ export const sendCode = async (req: Request, res: Response) => {
 
 /**
  * Verifies the provided code for the given email.
- * - Retrieves the stored code from Redis or the simulated store.
- * - Compares it with the provided code.
- * - On success, deletes the code and returns a JWT token.
+ * - If a user exists (login flow), returns a JWT token (signed with userId and email) plus user data.
+ * - If no user is found (registration flow), returns a flag so the frontend can continue registration.
  */
 export const verifyCode = async (req: Request, res: Response) => {
   try {
@@ -113,13 +105,30 @@ export const verifyCode = async (req: Request, res: Response) => {
       await redisClient.del(`emailCodes:${email}`);
     }
 
-    // Generate a JWT token for the user (using email as the identifier)
-    const token = jwt.sign({ email }, process.env.JWT_SECRET || "fallbackSecret", { expiresIn: "1d" });
-    return res.status(200).json({
-      message: "Code verified successfully (simulated)",
-      token,
-      user: { email },
-    });
+    // Check if the user exists in the database
+    const [rows]: any = await pool.promise().query("SELECT * FROM users WHERE email = ?", [email]);
+
+    if (rows && rows.length > 0) {
+      // Existing user: login flow
+      const user = rows[0];
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        process.env.JWT_SECRET || "fallbackSecret",
+        { expiresIn: "1d" }
+      );
+      return res.status(200).json({
+        message: "Code verified successfully",
+        token,
+        user,
+        isNewUser: false,
+      });
+    } else {
+      // New user: registration flow
+      return res.status(200).json({
+        message: "Code verified successfully, please complete registration",
+        isNewUser: true,
+      });
+    }
   } catch (err) {
     console.error("Error verifying code:", err);
     return res.status(500).json({ error: "Server error during code verification" });
