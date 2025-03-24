@@ -1,69 +1,80 @@
-import { createClient, RedisClientType } from 'redis';
-import dotenv from 'dotenv';
+import { createClient, RedisClientType } from "redis";
+import dotenv from "dotenv";
 
 dotenv.config({ path: "../.env" });
 
+// Get the Redis URL from environment variables.
+// For local development, you might use "redis://localhost:6379".
+// In production on Render, you'll set REDIS_URL via the dashboard to your managed Redis instance.
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
-// Create the Redis client using the connection URL from environment variables.
-const client: RedisClientType = createClient({ url: redisUrl });
+/**
+ * Creates a dummy Redis client with no-op implementations.
+ * This client logs warnings and returns null (or does nothing) for all operations.
+ */
+function createDummyClient(): RedisClientType {
+  console.warn("Using dummy Redis client.");
+  return {
+    get: async (key: string) => {
+      console.warn(`Dummy Redis: get("${key}") called.`);
+      return null;
+    },
+    set: async (key: string, value: string, options?: { EX: number }) => {
+      console.warn(`Dummy Redis: set("${key}", "${value}") called.`);
+    },
+    del: async (key: string) => {
+      console.warn(`Dummy Redis: del("${key}") called.`);
+    },
+    on: () => {
+      /* no-op */
+    },
+    // The connect method is a no-op for the dummy client.
+    connect: async () => {
+      console.warn("Dummy Redis: connect() called.");
+    }
+  } as unknown as RedisClientType;
+}
 
-// Create a dummy fallback client that provides no-op implementations.
-// These functions do nothing (or return null) so that calls won't crash your app.
-const dummyClient = {
-  async get(key: string): Promise<string | null> {
-    console.warn(`Dummy Redis: get("${key}") called.`);
-    return null;
-  },
-  async set(key: string, value: string, options?: { EX: number }): Promise<void> {
-    console.warn(`Dummy Redis: set("${key}", "${value}") called.`);
-  },
-  async del(key: string): Promise<void> {
-    console.warn(`Dummy Redis: del("${key}") called.`);
-  },
-  on(_: string, __: (...args: any[]) => void): void {
-    // No-op
-  },
-  async connect(): Promise<void> {
-    console.warn("Dummy Redis: connect() called. Not connecting to Redis.");
-  }
-};
-
-// We'll use a variable to hold our "active" client (either the real one or the dummy)
-let redisClient: RedisClientType | typeof dummyClient = dummyClient;
-
-// Attempt to connect to Redis. If successful, assign the real client; if not, keep the dummy.
-client.on('error', (err) => {
-  console.warn("Redis error, switching to dummy client:", err);
-  redisClient = dummyClient;
-});
-
-client.connect()
-  .then(() => {
+/**
+ * Initializes and returns a Redis client.
+ * If the connection fails, the function returns a dummy client.
+ */
+async function initRedisClient(): Promise<RedisClientType> {
+  try {
+    const client: RedisClientType = createClient({ url: redisUrl });
+    client.on("error", (err) => {
+      console.warn("Redis error:", err);
+    });
+    await client.connect();
     console.log("Connected to Redis successfully.");
-    redisClient = client;
-  })
-  .catch((err) => {
+    return client;
+  } catch (err) {
     console.warn("Failed to connect to Redis, using dummy client:", err);
-    redisClient = dummyClient;
-  });
+    return createDummyClient();
+  }
+}
 
-// Export an object with the Redis API methods.
-// These methods will call the currently active client (either real or dummy).
+// Initialize the Redis client (or dummy) once. All calls will await this promise.
+const redisClientPromise = initRedisClient();
+
+/**
+ * Exported Redis client API.
+ * Each method awaits the initialized client and then performs the operation.
+ */
 export default {
   async get(key: string): Promise<string | null> {
-    return redisClient.get(key);
+    const client = await redisClientPromise;
+    return client.get(key);
   },
   async set(key: string, value: string, options?: { EX: number }): Promise<void> {
-    await redisClient.set(key, value, options);
+    const client = await redisClientPromise;
+    await client.set(key, value, options);
   },
   async del(key: string): Promise<void> {
-    await redisClient.del(key);
+    const client = await redisClientPromise;
+    await client.del(key);
   },
   on(event: string, listener: (...args: any[]) => void): void {
-    redisClient.on(event, listener);
-  },
-  async connect(): Promise<void> {
-    await redisClient.connect();
+    redisClientPromise.then(client => client.on(event, listener));
   }
 };
