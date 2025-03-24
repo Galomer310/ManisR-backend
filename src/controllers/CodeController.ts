@@ -41,12 +41,15 @@ export const sendCode = async (req: Request, res: Response) => {
 export const verifyCode = async (req: Request, res: Response) => {
   try {
     const { phone, code } = req.body;
+    console.log("verifyCode received:", { phone, code });  // Debug log
+
     if (!phone || !code) {
       return res.status(400).json({ error: "Phone number and code are required" });
     }
 
-    // Retrieve the stored code
     const storedCode = await redisClient.get(`phoneCodes:${phone}`);
+    console.log("Stored code from Redis:", storedCode);
+
     if (!storedCode) {
       return res.status(400).json({ error: "No code has been sent or it has expired" });
     }
@@ -54,10 +57,7 @@ export const verifyCode = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Incorrect verification code" });
     }
 
-    // Remove the code from Redis
     await redisClient.del(`phoneCodes:${phone}`);
-
-    // Return success response (token/user creation would go here)
     return res.status(200).json({ message: "Code verified successfully (simulated)" });
   } catch (err) {
     console.error("Error verifying code:", err);
