@@ -44,9 +44,8 @@ export const sendCode = async (req: Request, res: Response) => {
     // Generate a 6-digit code
     const code = String(randomInt(100000, 1000000));
     console.log(`Generated code: ${code}`);
-    const expirySeconds = 300; // Code expires in 5 minutes
+    const expirySeconds = 300;
 
-    // Store the code using Redis or the simulated store
     if ((process.env.REDIS_URL || "").trim() === "dummy") {
       simulatedCodes[email] = code;
     } else {
@@ -62,17 +61,18 @@ export const sendCode = async (req: Request, res: Response) => {
       html: `<p>Your verification code is: <strong>${code}</strong></p>`,
     };
 
+    console.log("Mail options:", mailOptions);
+
     const info = await transporter.sendMail(mailOptions);
     console.log(`Email sent: ${info.messageId}`);
     console.log(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
 
-    // Return the code in the response for testing (remove in production)
     return res.status(200).json({
       message: "Verification code sent via email (simulated)",
-      code, // Remove this field in production
+      code, // For testing only!
     });
   } catch (err) {
-    console.error("Error sending code:", err);
+    console.error("Error sending email via Nodemailer:", err);
     return res.status(500).json({ error: "Server error sending code" });
   }
 };
