@@ -1,4 +1,3 @@
-// backend/src/routes/auth.ts
 import { Router } from "express";
 import { sendCode, verifyCode } from "../controllers/CodeController";
 import { registerDetails } from "../controllers/authController";

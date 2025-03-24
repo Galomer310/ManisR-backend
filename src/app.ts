@@ -5,7 +5,6 @@ import { Server } from "socket.io";
 import http from "http";
 import dotenv from "dotenv";
 
-// Load environment variables from .env file
 dotenv.config({ path: "../.env" });
 
 import authRoutes from "./routes/auth";
@@ -25,43 +24,29 @@ app.use("/food", foodRoutes);
 app.use("/preferences", preferencesRoutes);
 
 /*
-  Removed static file serving for frontend.
-  In development you might have served the frontend build using:
-  
-  app.use(express.static(path.join(__dirname, "../../frontend/dist")));
-  app.get("*", (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, "../../frontend/dist", "index.html"));
-  });
-  
-  Now, the frontend will be deployed separately.
+  Frontend is deployed separately, so static file serving is removed.
 */
 
-// Create the HTTP server from the Express app
+// Create HTTP server and set up Socket.IO for real-time features if needed.
 const httpServer = http.createServer(app);
-
-// Initialize Socket.IO for real-time features
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // In production, restrict this to your frontend domain
+    origin: "*", // Adjust this for production as needed.
   },
 });
 
-// Socket.IO connection handling
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
-
   socket.on("userLocation", (location) => {
     console.log(`Received location from ${socket.id}:`, location);
     socket.broadcast.emit("newUserLocation", { id: socket.id, ...location });
   });
-
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
     socket.broadcast.emit("userDisconnected", { id: socket.id });
   });
 });
 
-// Start the server
 httpServer.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 }).on("error", (err) => {

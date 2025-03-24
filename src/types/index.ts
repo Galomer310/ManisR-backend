@@ -1,25 +1,22 @@
-// backend/src/types/index.ts
-
 import { RowDataPacket } from "mysql2/promise";
 
 /**
- * Interface representing a basic User.
+ * User interface now uses email instead of phone.
  */
 export interface User {
   id: number;
   username: string;
-  phone: string;
+  email: string;
   password: string;
 }
 
 /**
- * UserRow extends User and RowDataPacket so that the type is compatible
- * with the data returned from mysql2's promise query.
+ * UserRow extends User and RowDataPacket.
  */
 export interface UserRow extends User, RowDataPacket {}
 
 /**
- * Interface representing a Food Item record in the database.
+ * Interface representing a Food Item record.
  */
 export interface FoodItem {
   id: number;
@@ -27,8 +24,8 @@ export interface FoodItem {
   item_description: string;
   pickup_address: string;
   box_option: "need" | "noNeed";
-  food_types: string;       // Comma-separated string (or JSON) of food types.
-  ingredients: string;      // Comma-separated string (or JSON) of ingredients.
+  food_types: string;
+  ingredients: string;
   special_notes: string;
   image_url: string | null;
   created_at: Date;
@@ -36,7 +33,7 @@ export interface FoodItem {
 }
 
 /**
- * Interface for Preferences, if needed.
+ * Interface for User Preferences.
  */
 export interface UserPreferences {
   id?: number;
@@ -44,7 +41,7 @@ export interface UserPreferences {
   city: string;
   radius: number;
   food_preference: "Kosher vegetarian" | "Vegan" | "Vegetarian + fish" | "No preferences";
-  allergies: string; // Comma-separated string of allergies
+  allergies: string;
   created_at?: Date;
   updated_at?: Date;
 }

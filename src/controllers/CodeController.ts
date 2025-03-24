@@ -1,45 +1,75 @@
+// backend/src/controllers/CodeController.ts
+
 import { Request, Response } from "express";
 import { randomInt } from "crypto";
 import redisClient from "../config/redisClient";
+import nodemailer from "nodemailer";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config({ path: "../.env" });
 
 // In-memory store to simulate Redis when using the dummy client.
-// This object maps phone numbers to verification codes.
-const simulatedCodes: { [phone: string]: string } = {};
+const simulatedCodes: { [email: string]: string } = {};
 
 /**
- * Sends a simulated verification code to the provided phone number.
+ * Create a Nodemailer transporter using SMTP credentials.
+ * For testing, Ethereal Email is used.
+ */
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: false, // false for port 587
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+/**
+ * Sends a verification code to the provided email.
  * - Generates a 6-digit code.
- * - If REDIS_URL is set to "dummy", stores the code in the in-memory store.
- *   Otherwise, stores the code in Redis with a 5-minute expiry.
- * - Logs the code to the console and returns it in the response (for testing).
+ * - Stores it in Redis or in a simulated in-memory store if using "dummy".
+ * - Sends the code via email using Nodemailer.
+ * - Returns the code in the response (for testing purposes).
  */
 export const sendCode = async (req: Request, res: Response) => {
   try {
-    const { phone } = req.body;
-    if (!phone) {
-      return res.status(400).json({ error: "Phone number is required" });
+    const { email } = req.body;
+    console.log("sendCode received body:", req.body);
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
     }
-    
+
     // Generate a 6-digit code
     const code = String(randomInt(100000, 1000000));
-    const expirySeconds = 300; // 5 minutes
-    
-    // Check if we're using the dummy Redis client
+    console.log(`Generated code: ${code}`);
+    const expirySeconds = 300; // Code expires in 5 minutes
+
+    // Store the code using Redis or the simulated store
     if ((process.env.REDIS_URL || "").trim() === "dummy") {
-      // Store in the simulated in-memory store
-      simulatedCodes[phone] = code;
+      simulatedCodes[email] = code;
     } else {
-      // Store in the real Redis instance
-      await redisClient.set(`phoneCodes:${phone}`, code, { EX: expirySeconds });
+      await redisClient.set(`emailCodes:${email}`, code, { EX: expirySeconds });
     }
-    
-    console.log(`Simulated SMS: Verification code ${code} for phone ${phone}`);
-    
-    // Return the code in the JSON response for testing purposes.
-    // Remove this in production.
+
+    // Set up email options
+    const mailOptions = {
+      from: `"ManisR App" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Your Verification Code",
+      text: `Your verification code is: ${code}`,
+      html: `<p>Your verification code is: <strong>${code}</strong></p>`,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email sent: ${info.messageId}`);
+    console.log(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
+
+    // Return the code in the response for testing (remove in production)
     return res.status(200).json({
-      message: "Verification code sent (simulated)",
-      code,
+      message: "Verification code sent via email (simulated)",
+      code, // Remove this field in production
     });
   } catch (err) {
     console.error("Error sending code:", err);
@@ -48,44 +78,48 @@ export const sendCode = async (req: Request, res: Response) => {
 };
 
 /**
- * Verifies the provided code for the given phone number.
- * - Retrieves the stored code from either Redis or the in-memory store.
- * - Compares the stored code with the code provided by the client.
- * - If they match, removes the code and returns a success message.
+ * Verifies the provided code for the given email.
+ * - Retrieves the stored code from Redis or the simulated store.
+ * - Compares it with the provided code.
+ * - On success, deletes the code and returns a JWT token.
  */
 export const verifyCode = async (req: Request, res: Response) => {
   try {
-    const { phone, code } = req.body;
-    console.log("verifyCode received:", { phone, code });
-    
-    if (!phone || !code) {
-      return res.status(400).json({ error: "Phone number and code are required" });
+    const { email, code } = req.body;
+    console.log("verifyCode received:", { email, code });
+    if (!email || !code) {
+      return res.status(400).json({ error: "Email and code are required" });
     }
-    
+
     let storedCode: string | null = null;
     if ((process.env.REDIS_URL || "").trim() === "dummy") {
-      storedCode = simulatedCodes[phone] || null;
+      storedCode = simulatedCodes[email] || null;
     } else {
-      storedCode = await redisClient.get(`phoneCodes:${phone}`);
+      storedCode = await redisClient.get(`emailCodes:${email}`);
     }
-    
-    console.log("Stored code for phone:", { phone, storedCode });
-    
+    console.log("Stored code for email:", { email, storedCode });
+
     if (!storedCode) {
       return res.status(400).json({ error: "No code has been sent or it has expired" });
     }
     if (storedCode !== code) {
       return res.status(400).json({ error: "Incorrect verification code" });
     }
-    
-    // Remove the code after verification
+
+    // Remove the stored code after verification
     if ((process.env.REDIS_URL || "").trim() === "dummy") {
-      delete simulatedCodes[phone];
+      delete simulatedCodes[email];
     } else {
-      await redisClient.del(`phoneCodes:${phone}`);
+      await redisClient.del(`emailCodes:${email}`);
     }
-    
-    return res.status(200).json({ message: "Code verified successfully (simulated)" });
+
+    // Generate a JWT token for the user (using email as the identifier)
+    const token = jwt.sign({ email }, process.env.JWT_SECRET || "fallbackSecret", { expiresIn: "1d" });
+    return res.status(200).json({
+      message: "Code verified successfully (simulated)",
+      token,
+      user: { email },
+    });
   } catch (err) {
     console.error("Error verifying code:", err);
     return res.status(500).json({ error: "Server error during code verification" });
