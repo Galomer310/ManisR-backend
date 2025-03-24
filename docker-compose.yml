@@ -1,0 +1,39 @@
+version: "3.8"
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_HOST=mysql
+      - DB_USER=manisr_user
+      - DB_PASSWORD=securepassword
+      - DB_NAME=manisr_db
+      - JWT_SECRET=someSuperSecretValue
+      - REDIS_URL=redis://redis:6379  # Use the service name "redis" for networking
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: mySuperRootPass
+      MYSQL_DATABASE: manisr_db
+      MYSQL_USER: manisr_user
+      MYSQL_PASSWORD: securepassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  mysql-data:
