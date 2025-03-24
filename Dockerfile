@@ -1,21 +1,30 @@
-# Use an official Node.js runtime as the base image
-FROM node:18-alpine
+# =========== Stage 1: Build ===========
+FROM node:18-alpine AS builder
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Install all dependencies (including dev)
 COPY package*.json ./
-RUN npm install --production
+RUN npm install
 
-# Copy the rest of the application code
+# Copy source code and build
 COPY . .
-
-# Build the application (transpile TypeScript to JavaScript)
 RUN npm run build
 
-# Expose the port that the application listens on
+# =========== Stage 2: Production ===========
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy only the compiled dist folder and package files
+COPY package*.json ./
+COPY --from=builder /app/dist ./dist
+
+# Install production dependencies only
+RUN npm install --production
+
+# Expose the port
 EXPOSE 3000
 
-# Define the command to run your application
-CMD ["npm", "start"]
+# Start the application
+CMD ["node", "dist/app.js"]
