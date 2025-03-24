@@ -1,19 +1,16 @@
-version: "3.8"
-
 services:
   backend:
-    build: ./backend
+    build: .
     ports:
-      - "3000:3000"  # Expose backend on port 3000
+      - "3000:3000"
     environment:
-      # These environment variables override values in your .env file when using Docker
       - PORT=3000
-      - DB_HOST=mysql           # Use the service name 'mysql' for Docker networking
+      - DB_HOST=mysql
       - DB_USER=manisr_user
       - DB_PASSWORD=securepassword
       - DB_NAME=manisr_db
       - JWT_SECRET=someSuperSecretValue
-      - REDIS_URL=redis://redis:6379  # Use the service name 'redis'
+      - REDIS_URL=redis://redis:6379
     depends_on:
       - mysql
       - redis
@@ -22,21 +19,20 @@ services:
     image: mysql:8
     restart: always
     environment:
-      # Configure the MySQL container to create your database and user
       - MYSQL_ROOT_PASSWORD=mySuperRootPass
       - MYSQL_DATABASE=manisr_db
       - MYSQL_USER=manisr_user
       - MYSQL_PASSWORD=securepassword
     ports:
-      - "3306:3306"  # Expose MySQL on port 3306
+      - "3306:3306"
     volumes:
-      - mysql-data:/var/lib/mysql  # Persist MySQL data
+      - mysql-data:/var/lib/mysql
 
   redis:
     image: redis:alpine
     restart: always
     ports:
-      - "6379:6379"  # Expose Redis on port 6379
+      - "6379:6379"
 
 volumes:
   mysql-data:
