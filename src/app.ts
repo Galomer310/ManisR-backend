@@ -1,9 +1,9 @@
-import * as dotenv from "dotenv";
 import express, { Request, Response } from "express";
 import path from "path";
 import cors from "cors";
 import { Server } from "socket.io";
 import http from "http";
+import dotenv from "dotenv";
 
 // Load environment variables from .env file
 dotenv.config({ path: "../.env" });
@@ -24,35 +24,37 @@ app.use("/auth", authRoutes);
 app.use("/food", foodRoutes);
 app.use("/preferences", preferencesRoutes);
 
-/* 
-// The following code used to serve the frontend build from the backend container.
-// Since we are deploying the frontend separately, remove or comment out these lines.
-// 
-// app.use(express.static(path.join(__dirname, "../../frontend/dist")));
-// app.get("*", (_req: Request, res: Response) => {
-//   res.sendFile(path.join(__dirname, "../../frontend/dist", "index.html"));
-// });
+/*
+  Removed static file serving for frontend.
+  In development you might have served the frontend build using:
+  
+  app.use(express.static(path.join(__dirname, "../../frontend/dist")));
+  app.get("*", (_req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, "../../frontend/dist", "index.html"));
+  });
+  
+  Now, the frontend will be deployed separately.
 */
 
-// Create HTTP server and Socket.IO instance
+// Create the HTTP server from the Express app
 const httpServer = http.createServer(app);
+
+// Initialize Socket.IO for real-time features
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Adjust as needed in production
+    origin: "*", // In production, restrict this to your frontend domain
   },
 });
 
-// Socket.IO connection logic
+// Socket.IO connection handling
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
-  // When a user sends their location, broadcast it to others
   socket.on("userLocation", (location) => {
     console.log(`Received location from ${socket.id}:`, location);
     socket.broadcast.emit("newUserLocation", { id: socket.id, ...location });
   });
 
-  // Handle disconnections
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
     socket.broadcast.emit("userDisconnected", { id: socket.id });
