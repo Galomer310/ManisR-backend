@@ -5,7 +5,8 @@ dotenv.config({ path: "../.env" });
 
 // Get the Redis URL from environment variables.
 // For local development, you might use "redis://localhost:6379".
-// In production on Render, you'll set REDIS_URL via the dashboard to your managed Redis instance.
+// For production on Render, if you don't have a managed Redis instance,
+// set REDIS_URL to "dummy" in Render's dashboard to force the dummy client.
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
 /**
@@ -15,33 +16,39 @@ const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 function createDummyClient(): RedisClientType {
   console.warn("Using dummy Redis client.");
   return {
-    get: async (key: string) => {
+    async get(key: string): Promise<string | null> {
       console.warn(`Dummy Redis: get("${key}") called.`);
       return null;
     },
-    set: async (key: string, value: string, options?: { EX: number }) => {
+    async set(key: string, value: string, options?: { EX: number }): Promise<void> {
       console.warn(`Dummy Redis: set("${key}", "${value}") called.`);
     },
-    del: async (key: string) => {
+    async del(key: string): Promise<void> {
       console.warn(`Dummy Redis: del("${key}") called.`);
     },
-    on: () => {
-      /* no-op */
+    on: (_: string, __: (...args: any[]) => void): void => {
+      // No-op
     },
-    // The connect method is a no-op for the dummy client.
-    connect: async () => {
-      console.warn("Dummy Redis: connect() called.");
+    async connect(): Promise<void> {
+      console.warn("Dummy Redis: connect() called. Skipping connection.");
     }
   } as unknown as RedisClientType;
 }
 
 /**
  * Initializes and returns a Redis client.
- * If the connection fails, the function returns a dummy client.
+ * If the connection fails or if REDIS_URL is set to "dummy", the function returns a dummy client.
  */
 async function initRedisClient(): Promise<RedisClientType> {
+  // If REDIS_URL is set to "dummy", return the dummy client immediately.
+  if (redisUrl === "dummy") {
+    console.warn("REDIS_URL set to 'dummy'. Skipping real Redis connection.");
+    return createDummyClient();
+  }
+
   try {
-    const client: RedisClientType = createClient({ url: redisUrl });
+    // Force the type by casting the result from createClient to RedisClientType
+    const client = createClient({ url: redisUrl }) as unknown as RedisClientType;
     client.on("error", (err) => {
       console.warn("Redis error:", err);
     });
@@ -75,6 +82,6 @@ export default {
     await client.del(key);
   },
   on(event: string, listener: (...args: any[]) => void): void {
-    redisClientPromise.then(client => client.on(event, listener));
+    redisClientPromise.then((client) => client.on(event, listener));
   }
 };
