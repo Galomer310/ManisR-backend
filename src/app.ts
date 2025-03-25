@@ -61,3 +61,5 @@ io.on("connection", (socket) => {
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
+
+// after Postman testing, we can now move to the frontend
