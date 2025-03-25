@@ -1,11 +1,9 @@
 // backend/src/config/database.ts
-
 import { createPool } from "mysql2";
 import * as dotenv from "dotenv";
-dotenv.config({ path: "../.env" });
+dotenv.config();
 
-// Create a connection pool for MySQL.
-// Adjust connectionLimit as needed.
+// Create and export a MySQL connection pool.
 const pool = createPool({
   host: process.env.DB_HOST || "localhost",
   user: process.env.DB_USER,
@@ -14,5 +12,4 @@ const pool = createPool({
   connectionLimit: 10,
 });
 
-// Export the pool to be used in queries.
 export default pool;

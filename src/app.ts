@@ -1,15 +1,15 @@
-import express, { Request, Response } from "express";
-import path from "path";
+// backend/src/app.ts
+import express from "express";
 import cors from "cors";
-import { Server } from "socket.io";
 import http from "http";
+import { Server } from "socket.io";
 import dotenv from "dotenv";
-
 dotenv.config({ path: "../.env" });
 
 import authRoutes from "./routes/auth";
 import foodRoutes from "./routes/food";
 import preferencesRoutes from "./routes/preferences";
+import messagesRoutes from "./routes/messages";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,37 +18,46 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-// API routes
+// Mount API routes.
 app.use("/auth", authRoutes);
 app.use("/food", foodRoutes);
 app.use("/preferences", preferencesRoutes);
+app.use("/messages", messagesRoutes);
 
-/*
-  Frontend is deployed separately, so static file serving is removed.
-*/
-
-// Create HTTP server and set up Socket.IO for real-time features if needed.
-const httpServer = http.createServer(app);
-const io = new Server(httpServer, {
+// Create HTTP server and Socket.IO server.
+const server = http.createServer(app);
+const io = new Server(server, {
   cors: {
-    origin: "*", // Adjust this for production as needed.
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
   },
 });
 
+// Socket.IO for real-time chat.
 io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
-  socket.on("userLocation", (location) => {
-    console.log(`Received location from ${socket.id}:`, location);
-    socket.broadcast.emit("newUserLocation", { id: socket.id, ...location });
+  console.log("A client connected:", socket.id);
+
+  // Join a conversation room.
+  socket.on("joinConversation", ({ conversationId }) => {
+    socket.join(conversationId);
+    console.log(`Socket ${socket.id} joined conversation ${conversationId}`);
   });
+
+  // Handle sending messages.
+  socket.on("sendMessage", (data) => {
+    // Broadcast the new message to all clients in the room.
+    io.to(data.conversationId).emit("newMessage", {
+      senderId: data.senderId,
+      message: data.message,
+      created_at: new Date().toISOString(),
+    });
+  });
+
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-    socket.broadcast.emit("userDisconnected", { id: socket.id });
+    console.log("Socket disconnected:", socket.id);
   });
 });
 
-httpServer.listen(PORT, () => {
+// Start the server.
+server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
-}).on("error", (err) => {
-  console.error("Server error:", err);
 });

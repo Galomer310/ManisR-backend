@@ -1,52 +1,95 @@
+// backend/src/controllers/authController.ts
 import { Request, Response } from "express";
-import bcrypt from "bcrypt";
 import pool from "../config/database";
-import { UserRow } from "../types";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { sendVerificationEmail } from "../config/email";
+import dotenv from "dotenv";
+dotenv.config({ path: "../.env" });
 
 const saltRounds = 10;
 
 /**
- * Registers user details using email.
+ * Registers a new user.
+ * - Validates required fields.
+ * - Checks if the email is already registered.
+ * - Hashes the password.
+ * - Inserts the new user with verified=false and a default avatar.
+ * - Generates a JWT token (valid for 1 day) used for email verification.
+ * - Sends a verification email with a clickable link.
  */
-export const registerDetails = async (req: Request, res: Response) => {
+export const registerUser = async (req: Request, res: Response) => {
   try {
-    const { name, username, email, gender, password, honeypotField, captchaToken, formLoadedTime } = req.body;
-
-    if (honeypotField && honeypotField.trim() !== "") {
-      return res.status(200).json({ message: "Registration details saved successfully" });
-    }
-
-    const now = Date.now();
-    if (formLoadedTime && Number(formLoadedTime) && now - formLoadedTime < 3000) {
-      return res.status(400).json({ error: "Form submitted too quickly" });
-    }
-
-    if (!name || !username || !email || !gender || !password) {
+    const { name, username, email, password } = req.body;
+    if (!name || !username || !email || !password) {
       return res.status(400).json({ error: "All fields are required." });
     }
-
-    const passRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-    if (!passRegex.test(password)) {
-      return res.status(400).json({ error: "Password must be at least 8 characters with letters and numbers." });
-    }
-
-    // Check if a user with the provided email already exists.
-    const [existingRows] = await pool.promise().query<UserRow[]>("SELECT * FROM users WHERE email = ?", [email]);
-    if (existingRows && existingRows.length > 0) {
+    // Check if user already exists.
+    const [existingRows] = await pool
+      .promise()
+      .query("SELECT * FROM users WHERE email = ?", [email]);
+    if (Array.isArray(existingRows) && existingRows.length > 0) {
       return res.status(400).json({ error: "User with this email already exists." });
     }
-
+    // Hash the password.
     const hashedPassword = await bcrypt.hash(password, saltRounds);
+    // Insert the new user (assuming the users table has: name, username, email, password, verified, avatar_url).
     const [result]: any = await pool.promise().query(
-      "INSERT INTO users (name, username, email, gender, password) VALUES (?, ?, ?, ?, ?)",
-      [name, username, email, gender, hashedPassword]
+      "INSERT INTO users (name, username, email, password, verified, avatar_url) VALUES (?, ?, ?, ?, ?, ?)",
+      [name, username, email, hashedPassword, false, process.env.DEFAULT_AVATAR || "default_logo.png"]
     );
-
     const userId = result.insertId;
-    console.log("User registered successfully with email:", email, "ID:", userId);
-    return res.status(201).json({ message: "Registration details saved successfully", userId });
+    // Generate a verification token valid for 1 day.
+    const token = jwt.sign(
+      { userId, email },
+      process.env.JWT_SECRET || "fallbackSecret",
+      { expiresIn: "1d" }
+    );
+    // Send verification email.
+    await sendVerificationEmail(email, token);
+    return res.status(201).json({
+      message: "Registration successful. Please check your email to verify your account.",
+    });
   } catch (err) {
-    console.error("Registration details error:", err);
-    return res.status(500).json({ error: "Server error during registration details" });
+    console.error("Registration error:", err);
+    return res.status(500).json({ error: "Server error during registration." });
+  }
+};
+
+/**
+ * Logs in a verified user.
+ * - Validates email and password.
+ * - Checks if the user exists and is verified.
+ * - Compares password hashes.
+ * - Returns a JWT token for session authentication.
+ */
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+    const [rows]: any = await pool.promise().query("SELECT * FROM users WHERE email = ?", [email]);
+    if (!rows || rows.length === 0) {
+      return res.status(400).json({ error: "User not found." });
+    }
+    const user = rows[0];
+    if (!user.verified) {
+      return res.status(400).json({ error: "Email not verified. Please verify your email." });
+    }
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(400).json({ error: "Incorrect password." });
+    }
+    // Generate session JWT.
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET || "fallbackSecret",
+      { expiresIn: "1d" }
+    );
+    return res.status(200).json({ message: "Login successful.", token, user });
+  } catch (err) {
+    console.error("Login error:", err);
+    return res.status(500).json({ error: "Server error during login." });
   }
 };
