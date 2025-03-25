@@ -2,15 +2,17 @@
 import { Router } from "express";
 import { uploadFoodItem, getFoodItem, getAvailableFoodItems } from "../controllers/foodController";
 import upload from "../middlewares/upload";
+import { verifyJWT } from "../middlewares/authMiddleware";
 
 const router = Router();
 
-// Endpoint to upload a food item (supports file upload).
-router.post("/give", upload.single("image"), uploadFoodItem);
-// Endpoint to get all available food items.
-router.get("/available", getAvailableFoodItems);
-// Endpoint to retrieve a specific food item.
-router.get("/:id", getFoodItem);
+// Protected endpoint to upload a food item (requires authentication).
+router.post("/give", verifyJWT, upload.single("image"), uploadFoodItem);
 
+// This endpoint is public so anyone can view available food items.
+router.get("/available", getAvailableFoodItems);
+
+// Protected endpoint to retrieve a specific food item by id.
+router.get("/:id", verifyJWT, getFoodItem);
 
 export default router;
