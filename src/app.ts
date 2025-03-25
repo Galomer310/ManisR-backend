@@ -11,12 +11,18 @@ import foodRoutes from "./routes/food";
 import preferencesRoutes from "./routes/preferences";
 import messagesRoutes from "./routes/messages";
 
+import { apiLimiter } from "./middlewares/rateLimiter";
+import { errorHandler } from "./middlewares/errorHandler";
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+
+// Apply rate limiting to all API routes
+app.use(apiLimiter);
 
 // Mount API routes.
 app.use("/auth", authRoutes);
@@ -56,6 +62,9 @@ io.on("connection", (socket) => {
     console.log("Socket disconnected:", socket.id);
   });
 });
+
+
+app.use(errorHandler);
 
 // Start the server.
 server.listen(PORT, () => {
