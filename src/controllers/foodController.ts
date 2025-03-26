@@ -1,11 +1,10 @@
-// backend/src/controllers/foodController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 import axios from "axios";
 
 /**
  * Uploads a food item.
- * Geocodes the pickup address via Nominatim and stores the item in the database.
+ * Geocodes the pickup address and stores the food item in the database.
  */
 export const uploadFoodItem = async (req: Request, res: Response) => {
   try {
@@ -13,7 +12,6 @@ export const uploadFoodItem = async (req: Request, res: Response) => {
     let lat: number | null = null;
     let lng: number | null = null;
 
-    // Geocode the pickup address using Nominatim.
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pickupAddress)}`;
       const { data } = await axios.get(url, { headers: { "User-Agent": "YourApp/1.0" } });
@@ -40,7 +38,7 @@ export const uploadFoodItem = async (req: Request, res: Response) => {
 };
 
 /**
- * Retrieves a food item by its ID.
+ * Retrieves a food item by ID.
  */
 export const getFoodItem = async (req: Request, res: Response) => {
   try {
@@ -57,7 +55,8 @@ export const getFoodItem = async (req: Request, res: Response) => {
 };
 
 /**
- * Retrieves all available food items (approved) joined with the giver's avatar.
+ * Retrieves all available food items.
+ * Joins with the users table to include the giver's avatar.
  */
 export const getAvailableFoodItems = async (_: Request, res: Response) => {
   try {
@@ -77,35 +76,25 @@ export const getAvailableFoodItems = async (_: Request, res: Response) => {
  * Retrieves the current user's meal.
  */
 export const getMyMeal = async (req: Request, res: Response) => {
-  try {
-    const userId = req.userId;
-    const [rows]: any = await pool.promise().query("SELECT * FROM food_items WHERE user_id = ? LIMIT 1", [userId]);
-    if (!rows || rows.length === 0) {
-      return res.status(404).json({ error: "No meal found for this user." });
-    }
-    return res.status(200).json({ meal: rows[0] });
-  } catch (err) {
-    console.error("Get my meal error:", err);
-    return res.status(500).json({ error: "Server error retrieving meal." });
+  const userId = req.userId;
+  const [rows]: any = await pool.promise().query("SELECT * FROM food_items WHERE user_id = ? LIMIT 1", [userId]);
+  if (!rows || rows.length === 0) {
+    return res.status(404).json({ error: "No meal found." });
   }
+  return res.status(200).json({ meal: rows[0] });
 };
 
 /**
  * Updates the current user's meal.
  */
 export const updateMyMeal = async (req: Request, res: Response) => {
-  try {
-    const userId = req.userId;
-    const { itemDescription, pickupAddress, boxOption, foodTypes, ingredients, specialNotes } = req.body;
-    await pool.promise().query(
-      "UPDATE food_items SET item_description = ?, pickup_address = ?, box_option = ?, food_types = ?, ingredients = ?, special_notes = ? WHERE user_id = ?",
-      [itemDescription, pickupAddress, boxOption, foodTypes, ingredients, specialNotes, userId]
-    );
-    return res.status(200).json({ message: "Meal updated successfully." });
-  } catch (err) {
-    console.error("Update my meal error:", err);
-    return res.status(500).json({ error: "Server error updating meal." });
-  }
+  const userId = req.userId;
+  const { itemDescription, pickupAddress, boxOption, foodTypes, ingredients, specialNotes } = req.body;
+  await pool.promise().query(
+    "UPDATE food_items SET item_description=?, pickup_address=?, box_option=?, food_types=?, ingredients=?, special_notes=? WHERE user_id=?",
+    [itemDescription, pickupAddress, boxOption, foodTypes, ingredients, specialNotes, userId]
+  );
+  return res.status(200).json({ message: "Meal updated successfully." });
 };
 
 /**
@@ -114,7 +103,22 @@ export const updateMyMeal = async (req: Request, res: Response) => {
 export const deleteMyMeal = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
-    const [result]: any = await pool.promise().query("DELETE FROM food_items WHERE user_id = ?", [userId]);
+    // First, get the meal id for the logged‑in user.
+    const [rows]: any = await pool.promise().query(
+      "SELECT id FROM food_items WHERE user_id = ?",
+      [userId]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ error: "Meal not found or already deleted." });
+    }
+    const mealId = rows[0].id;
+    // Delete conversation for that meal.
+    await pool.promise().query("DELETE FROM meal_conversation WHERE meal_id = ?", [mealId]);
+    // Then delete the meal.
+    const [result]: any = await pool.promise().query(
+      "DELETE FROM food_items WHERE user_id = ?",
+      [userId]
+    );
     if (!result.affectedRows) {
       return res.status(404).json({ error: "Meal not found or already deleted." });
     }

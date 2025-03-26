@@ -1,4 +1,3 @@
-// backend/src/controllers/messageController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 
@@ -12,41 +11,52 @@ export const sendMessage = async (req: Request, res: Response) => {
     if (!senderId || !receiverId || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
-    // Create a conversation ID by sorting the two IDs
+    // Compute a unique conversation ID (order doesn't matter)
     const conversationId = [senderId, receiverId].sort().join("-");
     await pool.promise().query(
       "INSERT INTO messages (conversation_id, sender_id, receiver_id, message) VALUES (?, ?, ?, ?)",
       [conversationId, senderId, receiverId, message]
     );
     return res.status(201).json({ message: "Message sent." });
-  } catch (err) {
-    console.error("Send message error:", err);
+  } catch (error) {
+    console.error("Send message error:", error);
     return res.status(500).json({ error: "Server error sending message." });
   }
 };
 
 /**
- * Retrieves all messages for a conversation.
+ * Retrieves all messages for a given conversation.
  */
 export const getMessages = async (req: Request, res: Response) => {
   try {
     const conversationId = req.params.conversationId;
     if (!conversationId) {
-      return res
-        .status(400)
-        .json({ error: "Conversation ID is required." });
+      return res.status(400).json({ error: "Conversation ID is required." });
     }
     const [rows]: any = await pool
       .promise()
-      .query(
-        "SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
-        [conversationId]
-      );
+      .query("SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC", [conversationId]);
     return res.status(200).json({ messages: rows });
-  } catch (err) {
-    console.error("Get messages error:", err);
-    return res
-      .status(500)
-      .json({ error: "Server error retrieving messages." });
+  } catch (error) {
+    console.error("Get messages error:", error);
+    return res.status(500).json({ error: "Server error retrieving messages." });
+  }
+};
+
+/**
+ * Retrieves all conversations for the current user.
+ */
+export const getMyConversations = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const [rows]: any = await pool.promise().query(
+      "SELECT DISTINCT conversation_id FROM messages WHERE sender_id = ? OR receiver_id = ?",
+      [userId, userId]
+    );
+    return res.status(200).json({ conversations: rows });
+  } catch (error) {
+    console.error("Error fetching conversations:", error);
+    return res.status(500).json({ error: "Server error fetching conversations." });
   }
 };

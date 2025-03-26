@@ -1,4 +1,3 @@
-// backend/src/app.ts
 import express from "express";
 import cors from "cors";
 import http from "http";
@@ -11,28 +10,26 @@ import authRoutes from "./routes/auth";
 import foodRoutes from "./routes/food";
 import preferencesRoutes from "./routes/preferences";
 import messagesRoutes from "./routes/messages";
+import mealConversationRoutes from "./routes/mealConversation"; 
 
 import { apiLimiter } from "./middlewares/rateLimiter";
 import { errorHandler } from "./middlewares/errorHandler";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || "3000", 10);
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-// Use JSON and URL-encoded middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Explicitly allow requests from your frontend's origin.
-// IMPORTANT: Set FRONTEND_URL in your .env to "http://localhost:5173"
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
-  })
-);
+// Allow requests from your frontend's origin
+app.use(cors({
+  origin: FRONTEND_URL,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
+}));
 
-// Apply rate limiting to all API routes.
+// Apply rate limiting to all API routes
 app.use(apiLimiter);
 
 // Mount API routes.
@@ -40,32 +37,33 @@ app.use("/auth", authRoutes);
 app.use("/food", foodRoutes);
 app.use("/preferences", preferencesRoutes);
 app.use("/messages", messagesRoutes);
+app.use("/meal-conversation", mealConversationRoutes);
 
-// Serve static uploads.
+// Serve static uploads
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-// Create HTTP server and configure Socket.IO.
+// Create HTTP server and Socket.IO server.
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    // IMPORTANT: Allow your frontend origin
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: FRONTEND_URL,
     methods: ["GET", "POST"],
   },
 });
 
-// Socket.IO for real-time chat.
+// Socket.IO for real‑time chat.
 io.on("connection", (socket) => {
   console.log("A client connected:", socket.id);
 
-  // When a client joins a conversation, join the room.
+  // Join a conversation room.
   socket.on("joinConversation", ({ conversationId }) => {
     socket.join(conversationId);
     console.log(`Socket ${socket.id} joined conversation ${conversationId}`);
   });
 
-  // Broadcast a new message to everyone in the room.
+  // Handle sending messages.
   socket.on("sendMessage", (data) => {
+    // Broadcast the new message to all clients in the room.
     io.to(data.conversationId).emit("newMessage", {
       senderId: data.senderId,
       message: data.message,
@@ -81,6 +79,7 @@ io.on("connection", (socket) => {
 app.use(errorHandler);
 
 // Start the server.
-server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server listening on http://172.26.192.1:${PORT}`);
 });
+
