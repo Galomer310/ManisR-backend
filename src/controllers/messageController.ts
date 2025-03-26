@@ -12,7 +12,7 @@ export const sendMessage = async (req: Request, res: Response) => {
     if (!senderId || !receiverId || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
-    // Create a unique conversation ID.
+    // Create a conversation ID by sorting the two IDs
     const conversationId = [senderId, receiverId].sort().join("-");
     await pool.promise().query(
       "INSERT INTO messages (conversation_id, sender_id, receiver_id, message) VALUES (?, ?, ?, ?)",
@@ -21,9 +21,7 @@ export const sendMessage = async (req: Request, res: Response) => {
     return res.status(201).json({ message: "Message sent." });
   } catch (err) {
     console.error("Send message error:", err);
-    return res
-      .status(500)
-      .json({ error: "Server error sending message." });
+    return res.status(500).json({ error: "Server error sending message." });
   }
 };
 

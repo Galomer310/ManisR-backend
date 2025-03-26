@@ -1,10 +1,11 @@
+// backend/src/controllers/foodController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 import axios from "axios";
 
 /**
  * Uploads a food item.
- * Geocodes the pickup address using Nominatim and saves the meal.
+ * Geocodes the pickup address via Nominatim and stores the item in the database.
  */
 export const uploadFoodItem = async (req: Request, res: Response) => {
   try {
@@ -12,7 +13,7 @@ export const uploadFoodItem = async (req: Request, res: Response) => {
     let lat: number | null = null;
     let lng: number | null = null;
 
-    // Geocode the pickup address via Nominatim.
+    // Geocode the pickup address using Nominatim.
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pickupAddress)}`;
       const { data } = await axios.get(url, { headers: { "User-Agent": "YourApp/1.0" } });
@@ -24,7 +25,6 @@ export const uploadFoodItem = async (req: Request, res: Response) => {
       console.error("Geocoding error:", geoErr);
     }
 
-    // Insert the food item into the database.
     const [result]: any = await pool.promise().query(
       `INSERT INTO food_items
       (user_id, item_description, pickup_address, box_option, food_types, ingredients, special_notes, lat, lng, approved)
@@ -40,7 +40,7 @@ export const uploadFoodItem = async (req: Request, res: Response) => {
 };
 
 /**
- * Retrieves a food item by ID.
+ * Retrieves a food item by its ID.
  */
 export const getFoodItem = async (req: Request, res: Response) => {
   try {
@@ -57,7 +57,7 @@ export const getFoodItem = async (req: Request, res: Response) => {
 };
 
 /**
- * Retrieves all available food items, joining with users for the avatar.
+ * Retrieves all available food items (approved) joined with the giver's avatar.
  */
 export const getAvailableFoodItems = async (_: Request, res: Response) => {
   try {
@@ -75,14 +75,13 @@ export const getAvailableFoodItems = async (_: Request, res: Response) => {
 
 /**
  * Retrieves the current user's meal.
- * If no meal is found, returns { meal: null } with HTTP 200.
  */
 export const getMyMeal = async (req: Request, res: Response) => {
   try {
-    const userId = req.userId; // set by JWT middleware
+    const userId = req.userId;
     const [rows]: any = await pool.promise().query("SELECT * FROM food_items WHERE user_id = ? LIMIT 1", [userId]);
-    if (!rows.length) {
-      return res.status(200).json({ meal: null });
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: "No meal found for this user." });
     }
     return res.status(200).json({ meal: rows[0] });
   } catch (err) {
@@ -115,7 +114,6 @@ export const updateMyMeal = async (req: Request, res: Response) => {
 export const deleteMyMeal = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
-    if (!userId) return res.status(401).json({ error: "Unauthorized: User ID missing." });
     const [result]: any = await pool.promise().query("DELETE FROM food_items WHERE user_id = ?", [userId]);
     if (!result.affectedRows) {
       return res.status(404).json({ error: "Meal not found or already deleted." });

@@ -18,17 +18,21 @@ import { errorHandler } from "./middlewares/errorHandler";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Use JSON and URL-encoded middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Explicitly allow requests from your frontend's origin.
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true,
-}));
+// IMPORTANT: Set FRONTEND_URL in your .env to "http://localhost:5173"
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
 
-// Apply rate limiting to all API routes
+// Apply rate limiting to all API routes.
 app.use(apiLimiter);
 
 // Mount API routes.
@@ -37,15 +41,16 @@ app.use("/food", foodRoutes);
 app.use("/preferences", preferencesRoutes);
 app.use("/messages", messagesRoutes);
 
-
+// Serve static uploads.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-
-// Create HTTP server and Socket.IO server.
+// Create HTTP server and configure Socket.IO.
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    // IMPORTANT: Allow your frontend origin
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST"],
   },
 });
 
@@ -53,15 +58,14 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("A client connected:", socket.id);
 
-  // Join a conversation room.
+  // When a client joins a conversation, join the room.
   socket.on("joinConversation", ({ conversationId }) => {
     socket.join(conversationId);
     console.log(`Socket ${socket.id} joined conversation ${conversationId}`);
   });
 
-  // Handle sending messages.
+  // Broadcast a new message to everyone in the room.
   socket.on("sendMessage", (data) => {
-    // Broadcast the new message to all clients in the room.
     io.to(data.conversationId).emit("newMessage", {
       senderId: data.senderId,
       message: data.message,
@@ -74,12 +78,9 @@ io.on("connection", (socket) => {
   });
 });
 
-
 app.use(errorHandler);
 
 // Start the server.
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
-
-// after Postman testing, we can now move to the frontend
