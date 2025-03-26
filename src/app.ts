@@ -18,7 +18,10 @@ import { errorHandler } from "./middlewares/errorHandler";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const allowedOrigins = [
+  process.env.FRONTEND_URL || "https://manisr.onrender.com",
+  "http://localhost:5173",
+];
 
 // Parse JSON and URL-encoded payloads
 app.use(express.json());
@@ -26,7 +29,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // Enable CORS for the frontend URL
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
 }));
@@ -48,7 +59,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: FRONTEND_URL,
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     methods: ["GET", "POST"],
   },
 });
