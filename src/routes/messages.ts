@@ -4,13 +4,13 @@ import { verifyJWT } from "../middlewares/authMiddleware";
 
 const router = Router();
 
-// Protected route: send a new message
+// Send a new message (protected)
 router.post("/", verifyJWT, sendMessage);
 
-// Protected route: retrieve messages for a specific conversation
+// Retrieve messages for a specific conversation (protected)
 router.get("/:conversationId", verifyJWT, getMessages);
 
-// Protected route: retrieve all conversations for the user
+// Retrieve all conversations for the current user (protected)
 router.get("/myConversations", verifyJWT, getMyConversations);
 
 export default router;

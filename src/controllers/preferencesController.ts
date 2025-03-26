@@ -1,27 +1,22 @@
-// backend/src/controllers/preferencesController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 
-/**
- * Saves or updates user preferences.
- * Expects: userId, city, radius, foodPreference, allergies.
- */
 export const savePreferences = async (req: Request, res: Response) => {
   try {
     const { userId, city, radius, foodPreference, allergies } = req.body;
     if (!userId || !city || !radius || !foodPreference) {
       return res.status(400).json({ error: "Missing required fields." });
     }
-    // Check if preferences already exist.
+    // Check if preferences already exist for the user
     const [existing] = await pool.promise().query("SELECT * FROM user_preferences WHERE user_id = ?", [userId]);
     if (Array.isArray(existing) && existing.length > 0) {
-      // Update existing preferences.
+      // Update existing preferences
       await pool.promise().query(
         "UPDATE user_preferences SET city = ?, radius = ?, food_preference = ?, allergies = ? WHERE user_id = ?",
         [city, radius, foodPreference, allergies, userId]
       );
     } else {
-      // Insert new preferences.
+      // Insert new preferences
       await pool.promise().query(
         "INSERT INTO user_preferences (user_id, city, radius, food_preference, allergies) VALUES (?, ?, ?, ?, ?)",
         [userId, city, radius, foodPreference, allergies]
@@ -34,9 +29,6 @@ export const savePreferences = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Retrieves preferences for a given user.
- */
 export const getPreferences = async (req: Request, res: Response) => {
   try {
     const userId = req.params.userId;

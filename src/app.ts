@@ -6,11 +6,12 @@ import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: "../.env" });
 
+// Import routes
 import authRoutes from "./routes/auth";
 import foodRoutes from "./routes/food";
 import preferencesRoutes from "./routes/preferences";
 import messagesRoutes from "./routes/messages";
-import mealConversationRoutes from "./routes/mealConversation"; 
+import mealConversationRoutes from "./routes/mealConversation";
 
 import { apiLimiter } from "./middlewares/rateLimiter";
 import { errorHandler } from "./middlewares/errorHandler";
@@ -19,10 +20,11 @@ const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
+// Parse JSON and URL-encoded payloads
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Allow requests from your frontend's origin
+// Enable CORS for the frontend URL
 app.use(cors({
   origin: FRONTEND_URL,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -32,17 +34,17 @@ app.use(cors({
 // Apply rate limiting to all API routes
 app.use(apiLimiter);
 
-// Mount API routes.
+// Mount API routes
 app.use("/auth", authRoutes);
 app.use("/food", foodRoutes);
 app.use("/preferences", preferencesRoutes);
 app.use("/messages", messagesRoutes);
 app.use("/meal-conversation", mealConversationRoutes);
 
-// Serve static uploads.
+// Serve static files (uploads)
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-// Create HTTP server and Socket.IO server.
+// Create HTTP server and attach Socket.IO for real‑time chat
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -51,19 +53,18 @@ const io = new Server(server, {
   },
 });
 
-// Socket.IO for real‑time chat.
+// Socket.IO connection handling
 io.on("connection", (socket) => {
   console.log("A client connected:", socket.id);
 
-  // Join a conversation room.
+  // When a client joins a conversation room
   socket.on("joinConversation", ({ conversationId }) => {
     socket.join(conversationId);
     console.log(`Socket ${socket.id} joined conversation ${conversationId}`);
   });
 
-  // Handle sending messages.
+  // When a new message is sent, broadcast it to the room
   socket.on("sendMessage", (data) => {
-    // Broadcast the new message to all clients in the room.
     io.to(data.conversationId).emit("newMessage", {
       senderId: data.senderId,
       message: data.message,
@@ -76,10 +77,10 @@ io.on("connection", (socket) => {
   });
 });
 
+// Global error handler middleware
 app.use(errorHandler);
 
-// Start the server.
+// Start the server on all network interfaces.
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server listening on http://172.26.192.1:${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
-

@@ -3,8 +3,7 @@ import pool from "../config/database";
 import axios from "axios";
 
 /**
- * Uploads a food item.
- * Geocodes the pickup address and stores the food item in the database.
+ * Uploads a food item by geocoding the pickup address and storing the data.
  */
 export const uploadFoodItem = async (req: Request, res: Response) => {
   try {
@@ -38,7 +37,7 @@ export const uploadFoodItem = async (req: Request, res: Response) => {
 };
 
 /**
- * Retrieves a food item by ID.
+ * Retrieves a food item by its ID.
  */
 export const getFoodItem = async (req: Request, res: Response) => {
   try {
@@ -55,8 +54,7 @@ export const getFoodItem = async (req: Request, res: Response) => {
 };
 
 /**
- * Retrieves all available food items.
- * Joins with the users table to include the giver's avatar.
+ * Retrieves all available food items (approved) with the giver’s avatar.
  */
 export const getAvailableFoodItems = async (_: Request, res: Response) => {
   try {
@@ -73,7 +71,7 @@ export const getAvailableFoodItems = async (_: Request, res: Response) => {
 };
 
 /**
- * Retrieves the current user's meal.
+ * Retrieves the current user's (giver's) meal.
  */
 export const getMyMeal = async (req: Request, res: Response) => {
   const userId = req.userId;
@@ -98,27 +96,21 @@ export const updateMyMeal = async (req: Request, res: Response) => {
 };
 
 /**
- * Deletes (cancels) the current user's meal.
+ * Deletes (cancels) the current user's meal and deletes its conversation.
  */
 export const deleteMyMeal = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
-    // First, get the meal id for the logged‑in user.
-    const [rows]: any = await pool.promise().query(
-      "SELECT id FROM food_items WHERE user_id = ?",
-      [userId]
-    );
+    // First, get the meal id for the current user.
+    const [rows]: any = await pool.promise().query("SELECT id FROM food_items WHERE user_id = ?", [userId]);
     if (!rows.length) {
       return res.status(404).json({ error: "Meal not found or already deleted." });
     }
     const mealId = rows[0].id;
-    // Delete conversation for that meal.
+    // Delete associated meal conversation.
     await pool.promise().query("DELETE FROM meal_conversation WHERE meal_id = ?", [mealId]);
     // Then delete the meal.
-    const [result]: any = await pool.promise().query(
-      "DELETE FROM food_items WHERE user_id = ?",
-      [userId]
-    );
+    const [result]: any = await pool.promise().query("DELETE FROM food_items WHERE user_id = ?", [userId]);
     if (!result.affectedRows) {
       return res.status(404).json({ error: "Meal not found or already deleted." });
     }

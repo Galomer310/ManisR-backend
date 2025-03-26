@@ -9,16 +9,16 @@ import { verifyJWT } from "../middlewares/authMiddleware";
 
 const router = Router();
 
-// POST a new message for a meal conversation.
+// Create a new message for a meal conversation
 router.post("/", verifyJWT, sendMealConversationMessage);
 
-// GET all messages for a specific meal conversation.
+// Get all messages for a specific meal conversation by mealId
 router.get("/:mealId", verifyJWT, getMealConversation);
 
-// GET message count (for the badge counter) for a meal conversation.
+// Get the count of messages for a meal conversation (for badge notifications)
 router.get("/count/:mealId", verifyJWT, getMealConversationCount);
 
-// DELETE conversation messages when a meal is cancelled.
+// Delete the conversation for a meal (used when a meal is cancelled)
 router.delete("/:mealId", verifyJWT, deleteMealConversation);
 
 export default router;

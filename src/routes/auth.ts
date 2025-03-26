@@ -1,15 +1,16 @@
-// backend/src/routes/auth.ts
 import { Router } from "express";
 import { registerUser, loginUser } from "../controllers/authController";
 import { verifyEmail } from "../controllers/verifyEmailController";
 
 const router = Router();
 
-// Endpoint to register a new user.
+// User registration endpoint
 router.post("/register", registerUser);
-// Endpoint to log in a user.
+
+// User login endpoint
 router.post("/login", loginUser);
-// Endpoint to verify the email using a token.
+
+// Email verification endpoint
 router.get("/verify-email", verifyEmail);
 
 export default router;

@@ -11,7 +11,6 @@ export const sendMessage = async (req: Request, res: Response) => {
     if (!senderId || !receiverId || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
-    // Compute a unique conversation ID (order doesn't matter)
     const conversationId = [senderId, receiverId].sort().join("-");
     await pool.promise().query(
       "INSERT INTO messages (conversation_id, sender_id, receiver_id, message) VALUES (?, ?, ?, ?)",
@@ -33,9 +32,10 @@ export const getMessages = async (req: Request, res: Response) => {
     if (!conversationId) {
       return res.status(400).json({ error: "Conversation ID is required." });
     }
-    const [rows]: any = await pool
-      .promise()
-      .query("SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC", [conversationId]);
+    const [rows]: any = await pool.promise().query(
+      "SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
+      [conversationId]
+    );
     return res.status(200).json({ messages: rows });
   } catch (error) {
     console.error("Get messages error:", error);

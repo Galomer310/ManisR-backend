@@ -1,13 +1,16 @@
-// src/types.ts
 export interface User {
-  id: string;
+  id: number;
+  name: string;
   username: string;
   email: string;
+  password: string;
+  verified: boolean;
+  avatar_url: string;
 }
 
 export interface FoodItem {
   id: number;
-  user_id: number; // Giver’s user id
+  user_id: number; // Giver's user ID
   item_description: string;
   pickup_address: string;
   box_option: "need" | "noNeed";
@@ -16,14 +19,16 @@ export interface FoodItem {
   special_notes: string;
   lat: number | null;
   lng: number | null;
-  avatar_url: string;
+  approved: boolean;
 }
 
 export interface Preferences {
+  id?: number;
+  user_id: number;
   city: string;
   radius: number;
-  foodPreference: string;
-  allergies: string[];
+  food_preference: string;
+  allergies: string;
 }
 
 export interface Message {
