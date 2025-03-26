@@ -4,12 +4,8 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallbackSecret";
 
-/**
- * Middleware to verify JWT from the Authorization header.
- * On success, attaches the userId to the request object.
- */
 export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization; // Expecting "Bearer <token>"
+  const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).json({ error: "No token provided" });
   }
@@ -19,7 +15,7 @@ export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
-    (req as any).userId = decoded.userId;
+    req.userId = decoded.userId; // explicitly attached
     next();
   } catch (err) {
     console.error("Token verification failed:", err);

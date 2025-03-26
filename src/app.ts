@@ -4,6 +4,7 @@ import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
+import path from "path";
 dotenv.config({ path: "../.env" });
 
 import authRoutes from "./routes/auth";
@@ -35,6 +36,10 @@ app.use("/auth", authRoutes);
 app.use("/food", foodRoutes);
 app.use("/preferences", preferencesRoutes);
 app.use("/messages", messagesRoutes);
+
+
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 
 // Create HTTP server and Socket.IO server.
 const server = http.createServer(app);
