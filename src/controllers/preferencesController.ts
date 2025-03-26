@@ -1,10 +1,9 @@
 // backend/src/controllers/preferencesController.ts
-import { Request, Response } from 'express';
-import pool from '../config/database';
+import { Request, Response } from "express";
+import pool from "../config/database";
 
 /**
  * Saves or updates user preferences.
- * Expects: userId, city, radius, foodPreference, allergies.
  */
 export const savePreferences = async (req: Request, res: Response) => {
   try {
@@ -12,11 +11,8 @@ export const savePreferences = async (req: Request, res: Response) => {
     if (!userId || !city || !radius || !foodPreference) {
       return res.status(400).json({ error: "Missing required fields." });
     }
-    // Execute query to check if preferences already exist.
-    const result = await pool.query("SELECT * FROM user_preferences WHERE user_id = $1", [userId]);
-
-    // Use optional chaining and a default value to ensure rowCount is a number.
-    if ((result?.rowCount ?? 0) > 0) {
+    const existing = await pool.query("SELECT * FROM user_preferences WHERE user_id = $1", [userId]);
+    if (existing.rowCount && existing.rowCount > 0) {
       // Update existing preferences.
       await pool.query(
         "UPDATE user_preferences SET city = $1, radius = $2, food_preference = $3, allergies = $4, updated_at = CURRENT_TIMESTAMP WHERE user_id = $5",
@@ -45,9 +41,8 @@ export const getPreferences = async (req: Request, res: Response) => {
     if (!userId) {
       return res.status(400).json({ error: "User ID is required." });
     }
-    const query = "SELECT * FROM user_preferences WHERE user_id = $1";
-    const result = await pool.query(query, [userId]);
-    return res.status(200).json({ preferences: (result?.rowCount ?? 0) > 0 ? result.rows[0] : null });
+    const result = await pool.query("SELECT * FROM user_preferences WHERE user_id = $1", [userId]);
+    return res.status(200).json({ preferences: result.rows[0] || null });
   } catch (err) {
     console.error("Get preferences error:", err);
     return res.status(500).json({ error: "Server error retrieving preferences." });

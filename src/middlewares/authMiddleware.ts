@@ -1,11 +1,11 @@
+// backend/src/middlewares/authMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallbackSecret";
 
-// Middleware to verify JWT tokens for protected routes
 export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization; // Expecting "Bearer <token>"
   if (!authHeader) {
     return res.status(401).json({ error: "No token provided" });
   }
@@ -14,8 +14,9 @@ export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).json({ error: "Invalid token format" });
   }
   try {
+    // Verify token and attach userId to the request object.
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
-    req.userId = decoded.userId; // Attach the decoded userId to the request object
+    req.userId = decoded.userId;
     next();
   } catch (err) {
     console.error("Token verification failed:", err);

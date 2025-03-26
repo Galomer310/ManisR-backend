@@ -1,3 +1,4 @@
+// backend/src/app.ts
 import express from "express";
 import cors from "cors";
 import http from "http";
@@ -6,7 +7,7 @@ import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: "../.env" });
 
-// Import routes
+// Import your route modules
 import authRoutes from "./routes/auth";
 import foodRoutes from "./routes/food";
 import preferencesRoutes from "./routes/preferences";
@@ -16,21 +17,23 @@ import mealConversationRoutes from "./routes/mealConversation";
 import { apiLimiter } from "./middlewares/rateLimiter";
 import { errorHandler } from "./middlewares/errorHandler";
 
-const app = express();
-const PORT = parseInt(process.env.PORT || "3000", 10);
+// Define allowed origins – add both local and deployed addresses.
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "https://manisr.onrender.com",
-  "http://localhost:5173",
+  process.env.FRONTEND_URL || "http://localhost:5173",
+  "http://localhost:5173", // for local testing
 ];
 
-// Parse JSON and URL-encoded payloads
+const app = express();
+const PORT = parseInt(process.env.PORT || "3000", 10);
+
+// Middleware to parse JSON and URL-encoded data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Enable CORS for the frontend URL
+// Enable CORS for allowed origins.
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (e.g., mobile apps, curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -42,39 +45,39 @@ app.use(cors({
   credentials: true,
 }));
 
-// Apply rate limiting to all API routes
+// Apply rate limiting middleware
 app.use(apiLimiter);
 
-// Mount API routes
+// Mount API routes.
 app.use("/auth", authRoutes);
 app.use("/food", foodRoutes);
 app.use("/preferences", preferencesRoutes);
 app.use("/messages", messagesRoutes);
 app.use("/meal-conversation", mealConversationRoutes);
 
-// Serve static files (uploads)
+// Serve static files from the "uploads" folder.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-// Create HTTP server and attach Socket.IO for real‑time chat
+// Create HTTP server and attach Socket.IO for real‑time chat.
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
   },
 });
 
-// Socket.IO connection handling
+// Socket.IO connection handling.
 io.on("connection", (socket) => {
   console.log("A client connected:", socket.id);
 
-  // When a client joins a conversation room
+  // When a client joins a conversation room.
   socket.on("joinConversation", ({ conversationId }) => {
     socket.join(conversationId);
     console.log(`Socket ${socket.id} joined conversation ${conversationId}`);
   });
 
-  // When a new message is sent, broadcast it to the room
+  // When a new message is sent, broadcast it to that room.
   socket.on("sendMessage", (data) => {
     io.to(data.conversationId).emit("newMessage", {
       senderId: data.senderId,
@@ -88,10 +91,10 @@ io.on("connection", (socket) => {
   });
 });
 
-// Global error handler middleware
+// Global error handling middleware.
 app.use(errorHandler);
 
-// Start the server on all network interfaces.
-server.listen(PORT, '0.0.0.0', () => {
+// Start the server (listen on all network interfaces).
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server listening on port ${PORT}`);
 });
