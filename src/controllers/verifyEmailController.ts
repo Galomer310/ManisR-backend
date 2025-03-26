@@ -1,7 +1,8 @@
-import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
-import pool from "../config/database";
-import dotenv from "dotenv";
+// backend/src/controllers/verifyEmailController.ts
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import pool from '../config/database';
+import dotenv from 'dotenv';
 dotenv.config({ path: "../.env" });
 
 export const verifyEmail = async (req: Request, res: Response) => {
@@ -17,9 +18,12 @@ export const verifyEmail = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid or expired token." });
     }
     const { userId, email } = payload;
-    // Update the user's record to mark the email as verified
-    await pool.promise().query("UPDATE users SET verified = ? WHERE id = ? AND email = ?", [true, userId, email]);
-    // Redirect to the login page on the frontend
+    const updateQuery = `
+      UPDATE users
+      SET verified = true, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND email = $2
+    `;
+    await pool.query(updateQuery, [userId, email]);
     return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:3000"}/login`);
   } catch (err) {
     console.error("Email verification error:", err);
