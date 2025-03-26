@@ -39,7 +39,7 @@ app.use("/preferences", preferencesRoutes);
 app.use("/messages", messagesRoutes);
 app.use("/meal-conversation", mealConversationRoutes);
 
-// Serve static uploads
+// Serve static uploads.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Create HTTP server and Socket.IO server.
