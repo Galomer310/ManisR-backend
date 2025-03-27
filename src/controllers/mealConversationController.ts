@@ -4,7 +4,6 @@ import pool from "../config/database";
 
 /**
  * Inserts a new message into the meal_conversation table.
- * Expects: mealId, senderId, receiverId, and message.
  */
 export const sendMealConversationMessage = async (req: Request, res: Response) => {
   try {
@@ -12,11 +11,11 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
     if (!mealId || !senderId || !receiverId || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
-    await pool
-      .query(
-        "INSERT INTO meal_conversation (meal_id, sender_id, receiver_id, message, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)",
-        [mealId, senderId, receiverId, message]
-      );
+    const queryText = `
+      INSERT INTO meal_conversation (meal_id, sender_id, receiver_id, message, created_at)
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+    `;
+    await pool.query(queryText, [mealId, senderId, receiverId, message]);
     return res.status(201).json({ message: "Message sent." });
   } catch (error) {
     console.error("Send meal conversation message error:", error);
@@ -26,7 +25,6 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
 
 /**
  * Retrieves all messages for a given meal conversation.
- * Expects the mealId as a URL parameter.
  */
 export const getMealConversation = async (req: Request, res: Response) => {
   try {
@@ -34,11 +32,13 @@ export const getMealConversation = async (req: Request, res: Response) => {
     if (!mealId) {
       return res.status(400).json({ error: "Meal ID is required." });
     }
-    const result = await pool.query(
-      "SELECT * FROM meal_conversation WHERE meal_id = $1 ORDER BY created_at ASC",
-      [mealId]
-    );
-    return res.status(200).json({ conversation: result.rows });
+    const queryText = `
+      SELECT * FROM meal_conversation
+      WHERE meal_id = $1
+      ORDER BY created_at ASC
+    `;
+    const { rows } = await pool.query(queryText, [mealId]);
+    return res.status(200).json({ conversation: rows });
   } catch (error) {
     console.error("Get meal conversation error:", error);
     return res.status(500).json({ error: "Server error retrieving conversation." });
@@ -47,7 +47,6 @@ export const getMealConversation = async (req: Request, res: Response) => {
 
 /**
  * Retrieves the count of messages for a given meal conversation.
- * Instead of returning a 404 when no messages exist, it returns count 0.
  */
 export const getMealConversationCount = async (req: Request, res: Response) => {
   try {
@@ -55,13 +54,9 @@ export const getMealConversationCount = async (req: Request, res: Response) => {
     if (!mealId) {
       return res.status(400).json({ error: "Meal ID is required." });
     }
-    const result = await pool.query(
-      "SELECT COUNT(*) as count FROM meal_conversation WHERE meal_id = $1",
-      [mealId]
-    );
-    // If no rows are returned, count is 0
-    const count = result.rows.length ? parseInt(result.rows[0].count, 10) : 0;
-    return res.status(200).json({ count });
+    const queryText = "SELECT COUNT(*) AS count FROM meal_conversation WHERE meal_id = $1";
+    const { rows } = await pool.query(queryText, [mealId]);
+    return res.status(200).json({ count: rows[0].count });
   } catch (error) {
     console.error("Get conversation count error:", error);
     return res.status(500).json({ error: "Server error retrieving conversation count." });
@@ -70,7 +65,6 @@ export const getMealConversationCount = async (req: Request, res: Response) => {
 
 /**
  * Deletes all messages for a given meal conversation.
- * This should be called when the giver cancels the meal.
  */
 export const deleteMealConversation = async (req: Request, res: Response) => {
   try {
@@ -78,9 +72,12 @@ export const deleteMealConversation = async (req: Request, res: Response) => {
     if (!mealId) {
       return res.status(400).json({ error: "Meal ID is required." });
     }
-    const result = await pool.query("DELETE FROM meal_conversation WHERE meal_id = $1", [mealId]);
-    // Even if no messages were found, return success with count 0.
-    return res.status(200).json({ message: "Conversation deleted successfully.", deleted: result.rowCount });
+    const queryText = "DELETE FROM meal_conversation WHERE meal_id = $1";
+    const { rowCount } = await pool.query(queryText, [mealId]);
+    if (rowCount === 0) {
+      return res.status(404).json({ error: "Conversation not found or already deleted." });
+    }
+    return res.status(200).json({ message: "Conversation deleted successfully." });
   } catch (error) {
     console.error("Delete meal conversation error:", error);
     return res.status(500).json({ error: "Server error deleting conversation." });
