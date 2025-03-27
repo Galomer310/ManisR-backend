@@ -9,50 +9,40 @@ dotenv.config({ path: "../.env" });
 const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
-// Define allowed origins. Ensure these exactly match what your frontend sends.
-const allowedOrigins = [
-  process.env.FRONTEND_URL || "https://manisr.onrender.com",
-  "http://localhost:5173",
-];
-
-// Parse JSON and URL-encoded data.
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// CORS configuration using a custom function.
+// For debugging, allow all origins by calling back with true.
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps or curl)
+      // Allow requests with no origin (like curl or mobile apps)
       if (!origin) return callback(null, true);
-      // Check if the request origin exactly matches one of the allowed origins.
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        console.error("Origin not allowed by CORS:", origin);
-        return callback(new Error("Not allowed by CORS"), false);
-      }
+      // Temporarily allow all origins for testing:
+      return callback(null, true);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
-// Explicitly handle preflight requests.
+// Handle preflight requests explicitly.
 app.options(
   "*",
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      return callback(null, true);
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
-// Apply rate limiter middleware.
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Rate limiter and routes.
 import { apiLimiter } from "./middlewares/rateLimiter";
 app.use(apiLimiter);
 
-// Mount routes.
 import authRoutes from "./routes/auth";
 import foodRoutes from "./routes/food";
 import preferencesRoutes from "./routes/preferences";
@@ -68,11 +58,13 @@ app.use("/meal-conversation", mealConversationRoutes);
 // Serve static uploads.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-// Setup Socket.io.
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      return callback(null, true);
+    },
     methods: ["GET", "POST"],
   },
 });
