@@ -1,3 +1,4 @@
+// backend/src/routes/preferences.ts
 import { Router } from "express";
 import { savePreferences, getPreferences } from "../controllers/preferencesController";
 import { verifyJWT } from "../middlewares/authMiddleware";

@@ -11,33 +11,14 @@ import upload from "../middlewares/upload";
 export const uploadFoodItem = async (req: Request, res: Response) => {
   try {
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-    const {
-      itemDescription,
-      pickupAddress,
-      boxOption,
-      foodTypes,
-      ingredients,
-      specialNotes,
-      userId,
-      lat,
-      lng,
-    } = req.body;
-
-    // Convert lat/lng from strings to float
-    console.log("DEBUG: lat =", lat, "lng =", lng);
-    const latitude = lat ? parseFloat(lat) : null;
-    const longitude = lng ? parseFloat(lng) : null;
-
+    const { itemDescription, pickupAddress, boxOption, foodTypes, ingredients, specialNotes, userId } = req.body;
+    
     const queryText = `
-    INSERT INTO food_items (
-      user_id, item_description, pickup_address, box_option, 
-      food_types, ingredients, special_notes, avatar_url, lat, lng, 
-      approved, created_at, updated_at
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    RETURNING id
-  `;
-  
+      INSERT INTO food_items 
+      (user_id, item_description, pickup_address, box_option, food_types, ingredients, special_notes, avatar_url, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING id
+    `;
     const result = await pool.query(queryText, [
       userId,
       itemDescription,
@@ -47,20 +28,14 @@ export const uploadFoodItem = async (req: Request, res: Response) => {
       ingredients,
       specialNotes,
       imageUrl,
-      latitude,
-      longitude,
     ]);
     
-    return res.status(201).json({
-      message: "Meal uploaded successfully",
-      mealId: result.rows[0].id,
-    });
+    res.status(201).json({ message: "Meal uploaded successfully", mealId: result.rows[0].id });
   } catch (err) {
     console.error("Food upload error:", err);
-    return res.status(500).json({ error: "Server error during food upload." });
+    res.status(500).json({ error: "Server error during food upload." });
   }
 };
-
 
 /**
  * Retrieves a food item by ID.

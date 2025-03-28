@@ -1,3 +1,4 @@
+// backend/src/routes/messages.ts
 import { Router } from "express";
 import { sendMessage, getMessages, getMyConversations } from "../controllers/messageController";
 import { verifyJWT } from "../middlewares/authMiddleware";
