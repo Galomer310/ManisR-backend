@@ -1,4 +1,3 @@
-// backend/src/app.ts
 import express from "express";
 import cors from "cors";
 import http from "http";
@@ -10,32 +9,17 @@ dotenv.config({ path: "../.env" });
 const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
-// For debugging, allow all origins by calling back with true.
+// For development, allow all origins
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like curl or mobile apps)
-      if (!origin) return callback(null, true);
-      // Temporarily allow all origins for testing:
-      return callback(null, true);
-    },
+    origin: "*", // Allow all origins for testing
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
 // Handle preflight requests explicitly.
-app.options(
-  "*",
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      return callback(null, true);
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
-  })
-);
+app.options("*", cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -62,10 +46,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      return callback(null, true);
-    },
+    origin: "*", // allow all origins for socket.io as well
     methods: ["GET", "POST"],
   },
 });
