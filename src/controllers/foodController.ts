@@ -1,7 +1,14 @@
 // backend/src/controllers/foodController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
-import upload from "../middlewares/upload";
+
+/**
+ * Utility function: returns field value if it's an array or a string.
+ */
+const getField = (field: any): string => {
+  if (Array.isArray(field)) return field[0];
+  return field || "";
+};
 
 /**
  * Uploads a food item.
@@ -9,35 +16,24 @@ import upload from "../middlewares/upload";
  */
 export const uploadFoodItem = async (req: Request, res: Response) => {
   try {
-    // Get the uploaded file from req.files (if any)
+    // For file field (if provided)
     const imageUrl =
       req.files && (req.files as any).image
         ? `/uploads/${(req.files as any).image[0].filename}`
         : null;
 
-    // The text fields come in as arrays.
-    const {
-      itemDescription,
-      pickupAddress,
-      boxOption,
-      foodTypes,
-      ingredients,
-      specialNotes,
-      userId,
-      lat,
-      lng,
-    } = req.body as { [key: string]: string[] };
+    // Extract text fields from req.body
+    const itemDesc = getField(req.body.itemDescription);
+    const pickupAddr = getField(req.body.pickupAddress);
+    const boxOpt = getField(req.body.boxOption);
+    const foodT = getField(req.body.foodTypes);
+    const ingred = getField(req.body.ingredients);
+    const specNotes = getField(req.body.specialNotes);
+    const uId = getField(req.body.userId);
+    const latStr = getField(req.body.lat);
+    const lngStr = getField(req.body.lng);
 
-    const itemDesc = itemDescription ? itemDescription[0] : "";
-    const pickupAddr = pickupAddress ? pickupAddress[0] : "";
-    const boxOpt = boxOption ? boxOption[0] : "";
-    const foodT = foodTypes ? foodTypes[0] : "";
-    const ingred = ingredients ? ingredients[0] : "";
-    const specNotes = specialNotes ? specialNotes[0] : "";
-    const uId = userId ? userId[0] : "";
-    const latStr = lat ? lat[0] : "";
-    const lngStr = lng ? lng[0] : "";
-
+    // Convert lat/lng strings to numbers (or null if empty)
     const latitude = latStr ? parseFloat(latStr) : null;
     const longitude = lngStr ? parseFloat(lngStr) : null;
 
@@ -62,7 +58,7 @@ export const uploadFoodItem = async (req: Request, res: Response) => {
       latitude,
       longitude,
     ]);
-
+    
     return res.status(201).json({
       message: "Meal uploaded successfully",
       mealId: result.rows[0].id,
@@ -93,7 +89,6 @@ export const getFoodItem = async (req: Request, res: Response) => {
 
 /**
  * Retrieves all available food items.
- * (Joins with the users table to include the giver's avatar.)
  */
 export const getAvailableFoodItems = async (_: Request, res: Response) => {
   try {
@@ -126,7 +121,6 @@ export const getMyMeal = async (req: Request, res: Response) => {
 
 /**
  * Updates the current user's meal.
- * Updates lat/lng if provided.
  */
 export const updateMyMeal = async (req: Request, res: Response) => {
   const userId = req.userId;
@@ -139,16 +133,16 @@ export const updateMyMeal = async (req: Request, res: Response) => {
     specialNotes,
     lat,
     lng,
-  } = req.body as { [key: string]: string[] };
+  } = req.body as { [key: string]: any };
 
-  const itemDesc = itemDescription ? itemDescription[0] : "";
-  const pickupAddr = pickupAddress ? pickupAddress[0] : "";
-  const boxOpt = boxOption ? boxOption[0] : "";
-  const foodT = foodTypes ? foodTypes[0] : "";
-  const ingred = ingredients ? ingredients[0] : "";
-  const specNotes = specialNotes ? specialNotes[0] : "";
-  const latStr = lat ? lat[0] : "";
-  const lngStr = lng ? lng[0] : "";
+  const itemDesc = getField(itemDescription);
+  const pickupAddr = getField(pickupAddress);
+  const boxOpt = getField(boxOption);
+  const foodT = getField(foodTypes);
+  const ingred = getField(ingredients);
+  const specNotes = getField(specialNotes);
+  const latStr = getField(lat);
+  const lngStr = getField(lng);
 
   const queryText = `
     UPDATE food_items
@@ -178,8 +172,7 @@ export const updateMyMeal = async (req: Request, res: Response) => {
 };
 
 /**
- * Deletes (cancels) the current user's meal.
- * Also deletes the related meal conversation.
+ * Deletes the current user's meal.
  */
 export const deleteMyMeal = async (req: Request, res: Response) => {
   try {
