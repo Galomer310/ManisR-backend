@@ -2,10 +2,9 @@
 import multer from "multer";
 import path from "path";
 
-// Configure Multer storage to save files in the "uploads" folder.
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../../uploads"));
+    cb(null, path.join(__dirname, "../../uploads")); // ensure uploads folder exists
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + "-" + file.originalname);

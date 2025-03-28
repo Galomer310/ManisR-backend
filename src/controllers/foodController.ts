@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import pool from "../config/database";
 import axios from "axios";
+import upload from "../middlewares/upload";
 
 /**
  * Uploads a food item.
@@ -9,36 +10,30 @@ import axios from "axios";
  */
 export const uploadFoodItem = async (req: Request, res: Response) => {
   try {
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
     const { itemDescription, pickupAddress, boxOption, foodTypes, ingredients, specialNotes, userId } = req.body;
-    let lat: number | null = null;
-    let lng: number | null = null;
-
-    // Geocode the pickup address via Nominatim.
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(pickupAddress)}`;
-      const { data } = await axios.get(url, { headers: { "User-Agent": "YourApp/1.0" } });
-      if (Array.isArray(data) && data.length > 0) {
-        lat = parseFloat(data[0].lat);
-        lng = parseFloat(data[0].lon);
-      }
-    } catch (geoErr) {
-      console.error("Geocoding error:", geoErr);
-    }
-
-    // Insert the food item using PostgreSQL parameterized query ($1, $2, ...)
+    
     const queryText = `
       INSERT INTO food_items 
-      (user_id, item_description, pickup_address, box_option, food_types, ingredients, special_notes, lat, lng, approved, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      (user_id, item_description, pickup_address, box_option, food_types, ingredients, special_notes, avatar_url, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING id
     `;
-    const values = [userId, itemDescription, pickupAddress, boxOption, foodTypes, ingredients, specialNotes, lat, lng];
-    const { rows } = await pool.query(queryText, values);
-    const foodItemId = rows[0].id;
-    return res.status(201).json({ message: "Food item uploaded successfully", foodItemId });
+    const result = await pool.query(queryText, [
+      userId,
+      itemDescription,
+      pickupAddress,
+      boxOption,
+      foodTypes,
+      ingredients,
+      specialNotes,
+      imageUrl,
+    ]);
+    
+    res.status(201).json({ message: "Meal uploaded successfully", mealId: result.rows[0].id });
   } catch (err) {
     console.error("Food upload error:", err);
-    return res.status(500).json({ error: "Server error during food upload." });
+    res.status(500).json({ error: "Server error during food upload." });
   }
 };
 
