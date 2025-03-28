@@ -14,7 +14,21 @@ import { verifyJWT } from "../middlewares/authMiddleware";
 const router = Router();
 
 // Create a new meal (giver posts a meal)
-router.post("/give", verifyJWT, upload.single("image"), uploadFoodItem);
+// Accept both the image and the text fields
+const mealUpload = upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "itemDescription", maxCount: 1 },
+  { name: "pickupAddress", maxCount: 1 },
+  { name: "boxOption", maxCount: 1 },
+  { name: "foodTypes", maxCount: 1 },
+  { name: "ingredients", maxCount: 1 },
+  { name: "specialNotes", maxCount: 1 },
+  { name: "userId", maxCount: 1 },
+  { name: "lat", maxCount: 1 },
+  { name: "lng", maxCount: 1 },
+]);
+
+router.post("/give", verifyJWT, mealUpload, uploadFoodItem);
 
 // Giver's endpoints: retrieve, update, and delete their meal
 router.get("/myMeal", verifyJWT, getMyMeal);
