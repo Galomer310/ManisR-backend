@@ -8,13 +8,12 @@ import {
   updateMyMeal,
   deleteMyMeal,
 } from "../controllers/foodController";
-import upload from "../middlewares/upload";
 import { verifyJWT } from "../middlewares/authMiddleware";
+import upload from "../middlewares/upload";
 
 const router = Router();
 
-// Create a new meal (giver posts a meal)
-// Accept both the image and the text fields
+// Use upload.fields() to accept both file and text fields.
 const mealUpload = upload.fields([
   { name: "image", maxCount: 1 },
   { name: "itemDescription", maxCount: 1 },
@@ -29,13 +28,9 @@ const mealUpload = upload.fields([
 ]);
 
 router.post("/give", verifyJWT, mealUpload, uploadFoodItem);
-
-// Giver's endpoints: retrieve, update, and delete their meal
 router.get("/myMeal", verifyJWT, getMyMeal);
-router.put("/myMeal", verifyJWT, updateMyMeal);
+router.put("/myMeal", verifyJWT, mealUpload, updateMyMeal);
 router.delete("/myMeal", verifyJWT, deleteMyMeal);
-
-// Public endpoints: view available meals and get a specific meal by id
 router.get("/available", getAvailableFoodItems);
 router.get("/:id", getFoodItem);
 
