@@ -4,11 +4,16 @@ import pool from "../config/database";
 
 export const sendMealConversationMessage = async (req: Request, res: Response) => {
   try {
-    const { mealId, senderId, receiverId, message } = req.body;
-    // Use explicit null/undefined checks so that 0 is considered valid if needed.
-    if (mealId == null || senderId == null || receiverId == null || !message) {
-      return res.status(400).json({ error: "All fields are required." });
+    // Parse IDs to numbers
+    const mealId = parseInt(req.body.mealId, 10);
+    const senderId = parseInt(req.body.senderId, 10);
+    const receiverId = parseInt(req.body.receiverId, 10);
+    const { message } = req.body;
+    
+    if (isNaN(mealId) || isNaN(senderId) || isNaN(receiverId) || !message) {
+      return res.status(400).json({ error: "All fields are required and must be valid." });
     }
+    
     const queryText = `
       INSERT INTO meal_conversation 
         (meal_id, sender_id, receiver_id, message)
@@ -25,11 +30,8 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
 
 export const getMealConversation = async (req: Request, res: Response) => {
   try {
-    const mealIdParam = req.params.mealId;
-    if (!mealIdParam) {
-      return res.status(400).json({ error: "Meal ID is required." });
-    }
-    const mealId = parseInt(mealIdParam, 10);
+    // Parse the mealId from the URL (it comes as a string)
+    const mealId = parseInt(req.params.mealId, 10);
     if (isNaN(mealId)) {
       return res.status(400).json({ error: "Invalid Meal ID." });
     }
@@ -48,11 +50,11 @@ export const getMealConversation = async (req: Request, res: Response) => {
 
 export const getMealConversationCount = async (req: Request, res: Response) => {
   try {
-    const mealId = req.params.mealId;
-    if (!mealId) {
-      return res.status(400).json({ error: "Meal ID is required." });
+    const mealId = parseInt(req.params.mealId, 10);
+    if (isNaN(mealId)) {
+      return res.status(400).json({ error: "Invalid Meal ID." });
     }
-    const queryText = "SELECT COUNT(*) AS count FROM meal_converstion WHERE meal_id = $1";
+    const queryText = "SELECT COUNT(*) AS count FROM meal_conversation WHERE meal_id = $1";
     const { rows } = await pool.query(queryText, [mealId]);
     return res.status(200).json({ count: rows[0].count });
   } catch (error) {
@@ -63,11 +65,11 @@ export const getMealConversationCount = async (req: Request, res: Response) => {
 
 export const deleteMealConversation = async (req: Request, res: Response) => {
   try {
-    const mealId = req.params.mealId;
-    if (!mealId) {
-      return res.status(400).json({ error: "Meal ID is required." });
+    const mealId = parseInt(req.params.mealId, 10);
+    if (isNaN(mealId)) {
+      return res.status(400).json({ error: "Invalid Meal ID." });
     }
-    const queryText = "DELETE FROM meal_converstion WHERE meal_id = $1";
+    const queryText = "DELETE FROM meal_conversation WHERE meal_id = $1";
     const { rowCount } = await pool.query(queryText, [mealId]);
     if (rowCount === 0) {
       return res.status(404).json({ error: "Conversation not found or already deleted." });
