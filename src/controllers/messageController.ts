@@ -1,6 +1,6 @@
 // backend/src/controllers/messageController.ts
-import { Request, Response } from 'express';
-import pool from '../config/database';
+import { Request, Response } from "express";
+import pool from "../config/database";
 
 export const sendMessage = async (req: Request, res: Response) => {
   try {
@@ -8,14 +8,15 @@ export const sendMessage = async (req: Request, res: Response) => {
     if (!senderId || !receiverId || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
-    // Compute a unique conversation ID (order does not matter)
+    // Compute a unique conversation id (order independent)
     const conversationId = [senderId, receiverId].sort().join("-");
     const insertQuery = `
       INSERT INTO messages (conversation_id, sender_id, receiver_id, message, created_at)
       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+      RETURNING id
     `;
-    await pool.query(insertQuery, [conversationId, senderId, receiverId, message]);
-    return res.status(201).json({ message: "Message sent." });
+    const result = await pool.query(insertQuery, [conversationId, senderId, receiverId, message]);
+    return res.status(201).json({ message: "Message sent", messageId: result.rows[0].id });
   } catch (error) {
     console.error("Send message error:", error);
     return res.status(500).json({ error: "Server error sending message." });
