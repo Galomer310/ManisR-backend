@@ -4,6 +4,8 @@ import pool from "../config/database";
 
 export const sendMealConversationMessage = async (req: Request, res: Response) => {
   try {
+    console.log("Received payload:", req.body);
+
     // Parse IDs to numbers
     const mealId = parseInt(req.body.mealId, 10);
     const senderId = parseInt(req.body.senderId, 10);
