@@ -4,22 +4,22 @@ import {
   sendMealConversationMessage,
   getMealConversation,
   getMealConversationCount,
-  deleteMealConversation
+  deleteMealConversation,
 } from "../controllers/mealConversationController";
 import { verifyJWT } from "../middlewares/authMiddleware";
 
 const router = Router();
 
-// Create a new message for a meal conversation
+// Send a new message
 router.post("/", verifyJWT, sendMealConversationMessage);
 
-// Get all messages for a specific meal conversation by mealId
+// Retrieve conversation messages for a given meal
 router.get("/:mealId", verifyJWT, getMealConversation);
 
-// Get the count of messages for a meal conversation (for badge notifications)
+// Optionally, get message count
 router.get("/count/:mealId", verifyJWT, getMealConversationCount);
 
-// Delete the conversation for a meal (used when a meal is cancelled)
+// Delete an entire conversation
 router.delete("/:mealId", verifyJWT, deleteMealConversation);
 
 export default router;

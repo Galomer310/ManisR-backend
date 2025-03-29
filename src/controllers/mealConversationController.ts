@@ -2,22 +2,32 @@
 import { Request, Response } from "express";
 import pool from "../config/database";
 
-/**
- * Inserts a new message into the meal_conversation table.
- */
 export const sendMealConversationMessage = async (req: Request, res: Response) => {
   try {
     const { mealId, senderId, receiverId, message } = req.body;
-    // Use == null so that 0 is considered a valid value
+    // Use == null to check for null or undefined so that 0 is accepted if needed.
     if (mealId == null || senderId == null || receiverId == null || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
+    // For this example, we set:
+    // - food_iteam = mealId (you can change this if needed)
+    // - sender_id_user_id = senderId
+    // - receiver_id_user_id = receiverId
     const queryText = `
-      INSERT INTO meal_conversation (meal_id, sender_id, receiver_id, message, created_at)
-      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+      INSERT INTO meal_conversation 
+        (meal_id, sender_id, receiver_id, message, food_iteam, sender_id_user_id, receiver_id_user_id, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
       RETURNING id
     `;
-    const result = await pool.query(queryText, [mealId, senderId, receiverId, message]);
+    const result = await pool.query(queryText, [
+      mealId,
+      senderId,
+      receiverId,
+      message,
+      mealId,      // setting food_iteam same as mealId (adjust if needed)
+      senderId,    // setting sender_id_user_id
+      receiverId,  // setting receiver_id_user_id
+    ]);
     return res.status(201).json({ message: "Message sent.", messageId: result.rows[0].id });
   } catch (error) {
     console.error("Send meal conversation message error:", error);
@@ -25,9 +35,6 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
   }
 };
 
-/**
- * Retrieves all messages for a given meal conversation.
- */
 export const getMealConversation = async (req: Request, res: Response) => {
   try {
     const mealId = req.params.mealId;
@@ -47,9 +54,6 @@ export const getMealConversation = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Optionally, retrieves the count of messages for a meal conversation.
- */
 export const getMealConversationCount = async (req: Request, res: Response) => {
   try {
     const mealId = req.params.mealId;
@@ -65,9 +69,6 @@ export const getMealConversationCount = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Deletes all messages for a given meal conversation.
- */
 export const deleteMealConversation = async (req: Request, res: Response) => {
   try {
     const mealId = req.params.mealId;
