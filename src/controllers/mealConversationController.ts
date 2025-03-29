@@ -5,18 +5,17 @@ import pool from "../config/database";
 export const sendMealConversationMessage = async (req: Request, res: Response) => {
   try {
     console.log("Received payload:", req.body);
-
-    // Parse IDs to numbers
+    // Parse the ID values into numbers
     const mealId = parseInt(req.body.mealId, 10);
     const senderId = parseInt(req.body.senderId, 10);
     const receiverId = parseInt(req.body.receiverId, 10);
-    const { message } = req.body;
-    console.log("Received payload:", req.body);
+    const message = req.body.message;
 
-    if (isNaN(mealId) || isNaN(senderId) || isNaN(receiverId) || !message) {
+    if (isNaN(mealId) || isNaN(senderId) || isNaN(receiverId) || !message || message.trim() === "") {
       return res.status(400).json({ error: "All fields are required and must be valid." });
     }
-    
+
+    // Now, if your foreign keys exist (meal 117, user 4, and user 3 exist) this should succeed.
     const queryText = `
       INSERT INTO meal_conversation 
         (meal_id, sender_id, receiver_id, message)
@@ -30,6 +29,7 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
     return res.status(500).json({ error: "Server error sending message." });
   }
 };
+
 
 export const getMealConversation = async (req: Request, res: Response) => {
   try {
