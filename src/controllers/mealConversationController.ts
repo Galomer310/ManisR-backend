@@ -25,13 +25,16 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
 
 export const getMealConversation = async (req: Request, res: Response) => {
   try {
-    const mealId = req.params.mealId;
-    if (!mealId) {
+    const mealIdParam = req.params.mealId;
+    if (!mealIdParam) {
       return res.status(400).json({ error: "Meal ID is required." });
     }
-    // Use the correct table name "meal_converstion"
+    const mealId = parseInt(mealIdParam, 10);
+    if (isNaN(mealId)) {
+      return res.status(400).json({ error: "Invalid Meal ID." });
+    }
     const queryText = `
-      SELECT * FROM meal_converstion
+      SELECT * FROM meal_conversation
       WHERE meal_id = $1
       ORDER BY created_at ASC
     `;
