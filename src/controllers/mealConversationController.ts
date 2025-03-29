@@ -14,9 +14,10 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
     const queryText = `
       INSERT INTO meal_conversation (meal_id, sender_id, receiver_id, message, created_at)
       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+      RETURNING id
     `;
-    await pool.query(queryText, [mealId, senderId, receiverId, message]);
-    return res.status(201).json({ message: "Message sent." });
+    const result = await pool.query(queryText, [mealId, senderId, receiverId, message]);
+    return res.status(201).json({ message: "Message sent.", messageId: result.rows[0].id });
   } catch (error) {
     console.error("Send meal conversation message error:", error);
     return res.status(500).json({ error: "Server error sending message." });
@@ -46,7 +47,7 @@ export const getMealConversation = async (req: Request, res: Response) => {
 };
 
 /**
- * Retrieves the count of messages for a given meal conversation.
+ * Optionally, retrieves the count of messages for a meal conversation.
  */
 export const getMealConversationCount = async (req: Request, res: Response) => {
   try {
