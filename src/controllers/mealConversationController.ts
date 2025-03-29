@@ -8,6 +8,7 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
     if (mealId == null || senderId == null || receiverId == null || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
+    // Simplified query (without the extra columns)
     const queryText = `
       INSERT INTO meal_converstion 
         (meal_id, sender_id, receiver_id, message)
