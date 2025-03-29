@@ -5,12 +5,13 @@ import pool from "../config/database";
 export const sendMealConversationMessage = async (req: Request, res: Response) => {
   try {
     const { mealId, senderId, receiverId, message } = req.body;
+    // Check that mealId, senderId, receiverId are not null/undefined, and message is provided.
     if (mealId == null || senderId == null || receiverId == null || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
-    // Simplified query (without the extra columns)
+    // Use the correct table name "meal_conversation" and insert only the required columns.
     const queryText = `
-      INSERT INTO meal_converstion 
+      INSERT INTO meal_conversation 
         (meal_id, sender_id, receiver_id, message)
       VALUES ($1, $2, $3, $4)
       RETURNING id
@@ -27,7 +28,6 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
     return res.status(500).json({ error: "Server error sending message." });
   }
 };
-
 
 export const getMealConversation = async (req: Request, res: Response) => {
   try {
