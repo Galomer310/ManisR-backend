@@ -5,18 +5,13 @@ import pool from "../config/database";
 export const sendMealConversationMessage = async (req: Request, res: Response) => {
   try {
     const { mealId, senderId, receiverId, message } = req.body;
-    // Use == null to check for null or undefined so that 0 is accepted if needed.
     if (mealId == null || senderId == null || receiverId == null || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
-    // For this example, we set:
-    // - food_iteam = mealId (you can change this if needed)
-    // - sender_id_user_id = senderId
-    // - receiver_id_user_id = receiverId
     const queryText = `
-      INSERT INTO meal_conversation 
-        (meal_id, sender_id, receiver_id, message, food_iteam, sender_id_user_id, receiver_id_user_id, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+      INSERT INTO meal_converstion 
+        (meal_id, sender_id, receiver_id, message)
+      VALUES ($1, $2, $3, $4)
       RETURNING id
     `;
     const result = await pool.query(queryText, [
@@ -24,9 +19,6 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
       senderId,
       receiverId,
       message,
-      mealId,      // setting food_iteam same as mealId (adjust if needed)
-      senderId,    // setting sender_id_user_id
-      receiverId,  // setting receiver_id_user_id
     ]);
     return res.status(201).json({ message: "Message sent.", messageId: result.rows[0].id });
   } catch (error) {
@@ -34,6 +26,7 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
     return res.status(500).json({ error: "Server error sending message." });
   }
 };
+
 
 export const getMealConversation = async (req: Request, res: Response) => {
   try {
