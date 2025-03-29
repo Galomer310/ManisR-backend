@@ -8,7 +8,8 @@ import pool from "../config/database";
 export const sendMealConversationMessage = async (req: Request, res: Response) => {
   try {
     const { mealId, senderId, receiverId, message } = req.body;
-    if (!mealId || !senderId || !receiverId || !message) {
+    // Use == null so that 0 is considered a valid value
+    if (mealId == null || senderId == null || receiverId == null || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
     const queryText = `
