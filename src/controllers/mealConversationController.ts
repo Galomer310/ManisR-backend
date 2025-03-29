@@ -5,23 +5,17 @@ import pool from "../config/database";
 export const sendMealConversationMessage = async (req: Request, res: Response) => {
   try {
     const { mealId, senderId, receiverId, message } = req.body;
-    // Check that mealId, senderId, receiverId are not null/undefined, and message is provided.
+    // Use explicit null/undefined checks so that 0 is considered valid if needed.
     if (mealId == null || senderId == null || receiverId == null || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
-    // Use the correct table name "meal_conversation" and insert only the required columns.
     const queryText = `
       INSERT INTO meal_conversation 
         (meal_id, sender_id, receiver_id, message)
       VALUES ($1, $2, $3, $4)
       RETURNING id
     `;
-    const result = await pool.query(queryText, [
-      mealId,
-      senderId,
-      receiverId,
-      message,
-    ]);
+    const result = await pool.query(queryText, [mealId, senderId, receiverId, message]);
     return res.status(201).json({ message: "Message sent.", messageId: result.rows[0].id });
   } catch (error) {
     console.error("Send meal conversation message error:", error);
