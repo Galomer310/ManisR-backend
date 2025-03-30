@@ -90,7 +90,19 @@ export const getFoodItem = async (req: Request, res: Response) => {
 export const getAvailableFoodItems = async (_req: Request, res: Response) => {
   try {
     const queryText = `
-      SELECT f.*, u.avatar_url 
+      SELECT 
+        f.id,
+        f.user_id,
+        f.item_description,
+        f.pickup_address,
+        f.box_option,
+        f.food_types,
+        f.ingredients,
+        f.special_notes,
+        f.lat,
+        f.lng,
+        f.avatar_url AS meal_avatar,  
+        u.avatar_url AS user_avatar   
       FROM food_items f
       JOIN users u ON f.user_id = u.id
       WHERE f.approved = true
@@ -100,9 +112,10 @@ export const getAvailableFoodItems = async (_req: Request, res: Response) => {
     return res.status(200).json({ meals: rows });
   } catch (err) {
     console.error("Error fetching available food items:", err);
-    return res.status(500).json({ error: "Server error retrieving available food items." });
+    return res.status(500).json({ error: "Server error retrieving meals." });
   }
 };
+
 /**
  * Retrieves the current user's meal.
  */
