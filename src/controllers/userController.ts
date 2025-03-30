@@ -25,8 +25,9 @@ export const updateAvatar = async (req: Request, res: Response) => {
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
     if (!req.file)
       return res.status(400).json({ error: "No file uploaded" });
-    // Build the avatar URL using the uploads folder; adjust if needed.
-    const avatarUrl = `/uploads/${req.file.filename}`;
+    const backendBase = process.env.BACKEND_BASE_URL || "https://manisr-backend.onrender.com";
+    const avatarUrl = `${backendBase}/uploads/${req.file.filename}`;
+    
     const query =
       "UPDATE users SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING avatar_url";
     const { rows } = await pool.query(query, [avatarUrl, userId]);
