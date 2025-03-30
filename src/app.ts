@@ -44,7 +44,7 @@ app.use("/meal-conversation", mealConversationRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 const server = http.createServer(app);
-const io = new Server(server, {
+export const io = new Server(server, {
   cors: {
     origin: "*", // allow all origins for socket.io as well
     methods: ["GET", "POST"],

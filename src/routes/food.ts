@@ -7,6 +7,7 @@ import {
   getMyMeal,
   updateMyMeal,
   deleteMyMeal,
+  reserveMeal,
 } from "../controllers/foodController";
 import { verifyJWT } from "../middlewares/authMiddleware";
 import upload from "../middlewares/upload";
@@ -33,5 +34,6 @@ router.put("/myMeal", verifyJWT, mealUpload, updateMyMeal);
 router.delete("/myMeal", verifyJWT, deleteMyMeal);
 router.get("/available", getAvailableFoodItems);
 router.get("/:id", getFoodItem);
+router.post("/reserve/:mealId", verifyJWT, reserveMeal);
 
 export default router;

@@ -1,6 +1,7 @@
 // backend/src/controllers/foodController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
+import { io } from "../app"; 
 
 /**
  * Utility function: returns field value if it's an array or a string.
@@ -68,7 +69,6 @@ export const uploadFoodItem = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Server error during food upload." });
   }
 };
-
 /**
  * Retrieves a food item by ID.
  */
@@ -86,17 +86,17 @@ export const getFoodItem = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Server error retrieving food item." });
   }
 };
-
 /**
  * Retrieves all available food items.
  */
-export const getAvailableFoodItems = async (_: Request, res: Response) => {
+export const getAvailableFoodItems = async (_req: Request, res: Response) => {
   try {
     const queryText = `
       SELECT f.*, u.avatar_url 
-      FROM food_items f 
-      JOIN users u ON f.user_id = u.id 
+      FROM food_items f
+      JOIN users u ON f.user_id = u.id
       WHERE f.approved = true
+        AND f.status = 'available'
     `;
     const { rows } = await pool.query(queryText);
     return res.status(200).json({ meals: rows });
@@ -105,7 +105,6 @@ export const getAvailableFoodItems = async (_: Request, res: Response) => {
     return res.status(500).json({ error: "Server error retrieving available food items." });
   }
 };
-
 /**
  * Retrieves the current user's meal.
  */
@@ -118,7 +117,6 @@ export const getMyMeal = async (req: Request, res: Response) => {
   }
   return res.status(200).json({ meal: rows[0] });
 };
-
 /**
  * Updates the current user's meal.
  */
@@ -170,7 +168,6 @@ export const updateMyMeal = async (req: Request, res: Response) => {
   ]);
   return res.status(200).json({ message: "Meal updated successfully." });
 };
-
 /**
  * Deletes the current user's meal.
  */
@@ -193,5 +190,65 @@ export const deleteMyMeal = async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Delete my meal error:", err);
     return res.status(500).json({ error: "Server error cancelling meal." });
+  }
+};
+/**
+ * Reserves a meal for the currently logged-in Taker (req.userId).
+ */
+export const reserveMeal = async (req: Request, res: Response) => {
+  try {
+    const mealId = parseInt(req.params.mealId, 10);
+    if (isNaN(mealId)) {
+      return res.status(400).json({ error: "Invalid meal ID" });
+    }
+    const takerId = req.userId; // from the authMiddleware
+    if (!takerId) {
+      return res.status(401).json({ error: "Unauthorized." });
+    }
+
+    // 1) Check if meal is still available
+    const checkQuery = `SELECT status FROM food_items WHERE id = $1`;
+    const checkResult = await pool.query(checkQuery, [mealId]);
+    if (checkResult.rowCount === 0) {
+      return res.status(404).json({ error: "Meal not found." });
+    }
+    const currentStatus = checkResult.rows[0].status;
+    if (currentStatus !== "available") {
+      return res.status(400).json({ error: "Meal is not available." });
+    }
+
+    // 2) Reserve the meal
+    const now = new Date();
+    const expires = new Date(now.getTime() + 30 * 60 * 1000); // 30 min from now
+    const updateQuery = `
+      UPDATE food_items
+      SET status = 'reserved',
+          taker_id = $2,
+          reserved_at = $3,
+          expires_at = $4,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING id, user_id, taker_id, reserved_at, expires_at
+    `;
+    const updateResult = await pool.query(updateQuery, [mealId, takerId, now, expires]);
+    const row = updateResult.rows[0];
+
+    io.emit("mealReserved", {
+      mealId: row.id,
+      giverId: row.user_id,    // The Giver's user ID
+      takerId: row.taker_id,   // The Taker's user ID
+      reservedAt: row.reserved_at,
+      expiresAt: row.expires_at,
+    });
+
+    // (Optionally) Insert a meal_conversation "system message" or whatever
+    // Or simply respond with data:
+    return res.status(200).json({
+      message: "Meal reserved successfully.",
+      meal: row,
+    });
+  } catch (err) {
+    console.error("Error reserving meal:", err);
+    return res.status(500).json({ error: "Server error reserving meal." });
   }
 };
