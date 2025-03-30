@@ -33,13 +33,14 @@ import foodRoutes from "./routes/food";
 import preferencesRoutes from "./routes/preferences";
 import messagesRoutes from "./routes/messages";
 import mealConversationRoutes from "./routes/mealConversation";
+import userRoutes from "./routes/user";
 
 app.use("/auth", authRoutes);
 app.use("/food", foodRoutes);
 app.use("/preferences", preferencesRoutes);
 app.use("/messages", messagesRoutes);
 app.use("/meal-conversation", mealConversationRoutes);
-
+app.use("/users", userRoutes);
 // Serve static uploads.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
