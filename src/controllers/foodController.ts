@@ -2,7 +2,6 @@
 import { Request, Response } from "express";
 import pool from "../config/database";
 import { io } from "../app"; 
-
 /**
  * Utility function: returns field value if it's an array or a string.
  */
@@ -10,7 +9,6 @@ const getField = (field: any): string => {
   if (Array.isArray(field)) return field[0];
   return field || "";
 };
-
 /**
  * Uploads a food item.
  * Uses multer.fields() so that both file and text fields are parsed.
@@ -198,57 +196,89 @@ export const deleteMyMeal = async (req: Request, res: Response) => {
 export const reserveMeal = async (req: Request, res: Response) => {
   try {
     const mealId = parseInt(req.params.mealId, 10);
-    if (isNaN(mealId)) {
-      return res.status(400).json({ error: "Invalid meal ID" });
-    }
-    const takerId = req.userId; // from the authMiddleware
-    if (!takerId) {
-      return res.status(401).json({ error: "Unauthorized." });
-    }
+    const takerId = req.userId;
 
-    // 1) Check if meal is still available
-    const checkQuery = `SELECT status FROM food_items WHERE id = $1`;
-    const checkResult = await pool.query(checkQuery, [mealId]);
-    if (checkResult.rowCount === 0) {
-      return res.status(404).json({ error: "Meal not found." });
-    }
-    const currentStatus = checkResult.rows[0].status;
-    if (currentStatus !== "available") {
-      return res.status(400).json({ error: "Meal is not available." });
-    }
-
-    // 2) Reserve the meal
+    // 1) Mark the meal as reserved in DB
     const now = new Date();
-    const expires = new Date(now.getTime() + 30 * 60 * 1000); // 30 min from now
+    const expires = new Date(now.getTime() + 30 * 60 * 1000);
     const updateQuery = `
       UPDATE food_items
       SET status = 'reserved',
           taker_id = $2,
           reserved_at = $3,
-          expires_at = $4,
-          updated_at = CURRENT_TIMESTAMP
+          expires_at = $4
       WHERE id = $1
-      RETURNING id, user_id, taker_id, reserved_at, expires_at
+      RETURNING *
     `;
-    const updateResult = await pool.query(updateQuery, [mealId, takerId, now, expires]);
-    const row = updateResult.rows[0];
+    const result = await pool.query(updateQuery, [mealId, takerId, now, expires]);
+    const reservedMeal = result.rows[0];
 
+    // 2) Emit an event: include the entire meal row (so Giver sees item_description, etc.)
     io.emit("mealReserved", {
-      mealId: row.id,
-      giverId: row.user_id,    // The Giver's user ID
-      takerId: row.taker_id,   // The Taker's user ID
-      reservedAt: row.reserved_at,
-      expiresAt: row.expires_at,
+      meal: reservedMeal,
+      reservedAt: reservedMeal.reserved_at,
+      expiresAt: reservedMeal.expires_at,
     });
 
-    // (Optionally) Insert a meal_conversation "system message" or whatever
-    // Or simply respond with data:
+    // 3) Return success to the Taker
     return res.status(200).json({
       message: "Meal reserved successfully.",
-      meal: row,
+      meal: reservedMeal,
     });
   } catch (err) {
     console.error("Error reserving meal:", err);
     return res.status(500).json({ error: "Server error reserving meal." });
+  }
+};
+/**
+ * Taker finalizes collection of the meal: deletes the meal row & conversation.
+ * => POST or DELETE /food/collect/:mealId
+ */
+export const collectMeal = async (req: Request, res: Response) => {
+  try {
+    const mealId = parseInt(req.params.mealId, 10);
+    if (isNaN(mealId)) {
+      return res.status(400).json({ error: "Invalid meal ID" });
+    }
+    const takerId = req.userId;
+    if (!takerId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // 1) Verify this meal is currently reserved by the same taker
+    const checkQuery = `
+      SELECT id, user_id, taker_id, status
+      FROM food_items
+      WHERE id = $1
+    `;
+    const checkResult = await pool.query(checkQuery, [mealId]);
+    if (checkResult.rowCount === 0) {
+      return res.status(404).json({ error: "Meal not found." });
+    }
+    const mealRow = checkResult.rows[0];
+    if (mealRow.status !== "reserved" || mealRow.taker_id !== takerId) {
+      return res.status(400).json({ error: "Meal not reserved by you." });
+    }
+
+    // 2) Delete conversation for this meal
+    await pool.query("DELETE FROM meal_conversation WHERE meal_id = $1", [mealId]);
+
+    // 3) Delete the meal row
+    await pool.query("DELETE FROM food_items WHERE id = $1", [mealId]);
+
+    // 4) Emit a 'mealCollected' socket event so the Giver can respond
+    //    We'll send the Giver's ID & Taker's ID, so the Giver can see "my meal was collected"
+    io.emit("mealCollected", {
+      mealId: mealId,
+      giverId: mealRow.user_id,
+      takerId: mealRow.taker_id,
+    });
+
+    return res.status(200).json({
+      message: "Meal collected and removed from the database.",
+    });
+  } catch (err) {
+    console.error("Collect meal error:", err);
+    return res.status(500).json({ error: "Server error collecting meal." });
   }
 };

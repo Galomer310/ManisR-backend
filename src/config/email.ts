@@ -26,5 +26,9 @@ export async function sendVerificationEmail(email: string, token: string) {
     text: `Please verify your email by clicking the following link: ${verificationUrl}`,
     html: `<p>Please verify your email by clicking the following link: <a href="${verificationUrl}">Verify Email</a></p>`,
   };
+  const info = await transporter.sendMail(mailOptions);
+console.log("Email sent:", info.messageId);
+console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+
   return transporter.sendMail(mailOptions);
 }
