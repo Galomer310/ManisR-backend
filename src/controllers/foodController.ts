@@ -269,9 +269,14 @@ export const collectMeal = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Meal not found." });
     }
     const mealRow = checkResult.rows[0];
-    if (mealRow.status !== "reserved" || mealRow.taker_id !== takerId) {
-      return res.status(400).json({ error: "Meal not reserved by you." });
+    const userId = req.userId;
+    const isTaker = mealRow.taker_id === userId;
+    const isGiver = mealRow.user_id === userId;
+    
+    if (!isTaker && !isGiver) {
+      return res.status(403).json({ error: "You are not authorized to collect this meal." });
     }
+    
 
     // 2) Delete conversation for this meal
     await pool.query("DELETE FROM meal_conversation WHERE meal_id = $1", [mealId]);
