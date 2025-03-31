@@ -33,7 +33,7 @@ export const registerUser = async (req: Request, res: Response) => {
     const userId = result.rows[0].id;
     // Generate a token for email verification.
     const token = jwt.sign({ userId, email }, process.env.JWT_SECRET || "fallbackSecret", { expiresIn: "1d" });
-    // Send verification email.
+    // Send verification email using EmailJS.
     await sendVerificationEmail(email, token);
     return res.status(201).json({ message: "Registration successful. Please verify your email." });
   } catch (err) {
