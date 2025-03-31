@@ -69,31 +69,51 @@ export const getUsageHistory = async (req: Request, res: Response) => {
       return res.status(500).json({ error: "Server error fetching usage history." });
     }
 };
-  // Delete a specific usage history record.
-  export const deleteUsageHistory = async (req: Request, res: Response) => {
-    try {
-      const historyId = parseInt(req.params.id, 10);
-      if (isNaN(historyId)) {
-        return res.status(400).json({ error: "Invalid history ID" });
-      }
-      const userId = req.userId;
-      if (!userId) return res.status(401).json({ error: "Unauthorized" });
-      
-      // Check if the record belongs to the user.
-      const check = await pool.query("SELECT * FROM meal_history WHERE id = $1", [historyId]);
-      if (check.rowCount === 0) {
-        return res.status(404).json({ error: "History record not found" });
-      }
-      const record = check.rows[0];
-      if (record.giver_id !== userId && record.taker_id !== userId) {
-        return res.status(403).json({ error: "Not authorized to delete this record" });
-      }
-      
-      await pool.query("DELETE FROM meal_history WHERE id = $1", [historyId]);
-      return res.status(200).json({ message: "History record deleted successfully." });
-    } catch (err) {
-      console.error("Error deleting history record:", err);
-      return res.status(500).json({ error: "Server error deleting history record." });
+  // Delete a specific usage history record. soft delete for each party rather than removing the record entirely
+export const softDeleteUsageHistory = async (req: Request, res: Response) => {
+  try {
+    const historyId = parseInt(req.params.id, 10);
+    if (isNaN(historyId)) {
+      return res.status(400).json({ error: "Invalid history ID" });
     }
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    // Get the record to determine user's role.
+    const check = await pool.query("SELECT * FROM meal_history WHERE id = $1", [historyId]);
+    if (check.rowCount === 0) {
+      return res.status(404).json({ error: "History record not found" });
+    }
+    const record = check.rows[0];
+
+    // Determine if the current user is the giver or the taker.
+    let updateQuery = "";
+    let values: any[] = [];
+    if (record.giver_id === userId) {
+      updateQuery = "UPDATE meal_history SET deleted_by_giver = TRUE WHERE id = $1";
+      values = [historyId];
+    } else if (record.taker_id === userId) {
+      updateQuery = "UPDATE meal_history SET deleted_by_taker = TRUE WHERE id = $1";
+      values = [historyId];
+    } else {
+      return res.status(403).json({ error: "Not authorized to delete this record" });
+    }
+
+    await pool.query(updateQuery, values);
+
+    // Optional: If both flags are true, permanently delete the record.
+    if (record.deleted_by_giver || record.deleted_by_taker) {
+      // Re-check the record after update.
+      const recheck = await pool.query("SELECT deleted_by_giver, deleted_by_taker FROM meal_history WHERE id = $1", [historyId]);
+      const { deleted_by_giver, deleted_by_taker } = recheck.rows[0];
+      if (deleted_by_giver && deleted_by_taker) {
+        await pool.query("DELETE FROM meal_history WHERE id = $1", [historyId]);
+      }
+    }
+
+    return res.status(200).json({ message: "History record updated successfully." });
+  } catch (err) {
+    console.error("Error deleting history record:", err);
+    return res.status(500).json({ error: "Server error deleting history record." });
+  }
 };
-  
