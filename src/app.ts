@@ -34,6 +34,7 @@ import preferencesRoutes from "./routes/preferences";
 import messagesRoutes from "./routes/messages";
 import mealConversationRoutes from "./routes/mealConversation";
 import userRoutes from "./routes/user";
+import mealHistoryRoutes from "./routes/mealHistory";
 
 app.use("/auth", authRoutes);
 app.use("/food", foodRoutes);
@@ -41,6 +42,7 @@ app.use("/preferences", preferencesRoutes);
 app.use("/messages", messagesRoutes);
 app.use("/meal-conversation", mealConversationRoutes);
 app.use("/users", userRoutes);
+app.use("/meal-history", mealHistoryRoutes);
 // Serve static uploads.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
