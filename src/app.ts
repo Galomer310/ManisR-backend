@@ -35,6 +35,7 @@ import messagesRoutes from "./routes/messages";
 import mealConversationRoutes from "./routes/mealConversation";
 import userRoutes from "./routes/user";
 import mealHistoryRoutes from "./routes/mealHistory";
+import mealReviewsRoutes from "./routes/mealReviews";
 
 app.use("/auth", authRoutes);
 app.use("/food", foodRoutes);
@@ -43,6 +44,7 @@ app.use("/messages", messagesRoutes);
 app.use("/meal-conversation", mealConversationRoutes);
 app.use("/users", userRoutes);
 app.use("/meal-history", mealHistoryRoutes);
+app.use("/meal_reviews", mealReviewsRoutes);
 // Serve static uploads.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
