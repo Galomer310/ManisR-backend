@@ -1,4 +1,3 @@
-// backend/src/controllers/preferencesController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 
@@ -7,22 +6,31 @@ import pool from "../config/database";
  */
 export const savePreferences = async (req: Request, res: Response) => {
   try {
-    const { userId, city, radius, foodPreference, allergies } = req.body;
-    if (!userId || !city || !radius || !foodPreference) {
+    // Extract phone along with other fields
+    const { userId, phone, city, radius, foodPreference, allergies } = req.body;
+    
+    // Validate required fields (now including phone)
+    if (!userId || !phone || !city || !radius || !foodPreference) {
       return res.status(400).json({ error: "Missing required fields." });
     }
-    const existing = await pool.query("SELECT * FROM user_preferences WHERE user_id = $1", [userId]);
+    
+    // Check if preferences already exist for this user
+    const existing = await pool.query(
+      "SELECT * FROM user_preferences WHERE user_id = $1", 
+      [userId]
+    );
+    
     if (existing.rowCount && existing.rowCount > 0) {
-      // Update existing preferences.
+      // Update existing preferences, including the phone number.
       await pool.query(
-        "UPDATE user_preferences SET city = $1, radius = $2, food_preference = $3, allergies = $4, updated_at = CURRENT_TIMESTAMP WHERE user_id = $5",
-        [city, radius, foodPreference, allergies, userId]
+        "UPDATE user_preferences SET phone = $1, city = $2, radius = $3, food_preference = $4, allergies = $5, updated_at = CURRENT_TIMESTAMP WHERE user_id = $6",
+        [phone, city, radius, foodPreference, allergies, userId]
       );
     } else {
-      // Insert new preferences.
+      // Insert new preferences, including the phone number.
       await pool.query(
-        "INSERT INTO user_preferences (user_id, city, radius, food_preference, allergies, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-        [userId, city, radius, foodPreference, allergies]
+        "INSERT INTO user_preferences (user_id, phone, city, radius, food_preference, allergies, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+        [userId, phone, city, radius, foodPreference, allergies]
       );
     }
     return res.status(200).json({ message: "Preferences saved successfully." });
@@ -41,7 +49,10 @@ export const getPreferences = async (req: Request, res: Response) => {
     if (!userId) {
       return res.status(400).json({ error: "User ID is required." });
     }
-    const result = await pool.query("SELECT * FROM user_preferences WHERE user_id = $1", [userId]);
+    const result = await pool.query(
+      "SELECT * FROM user_preferences WHERE user_id = $1",
+      [userId]
+    );
     return res.status(200).json({ preferences: result.rows[0] || null });
   } catch (err) {
     console.error("Get preferences error:", err);
