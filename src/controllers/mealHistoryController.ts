@@ -45,8 +45,11 @@ export const archiveMeal = async (req: Request, res: Response) => {
     // Optionally, notify via socket.io.
     io.emit("mealArchived", { mealId, historyId: result.rows[0].id });
     
-    return res.status(200).json({ message: "Meal archived successfully." });
-  } catch (err) {
+    return res.status(200).json({
+      message: "Meal archived successfully.",
+      archivedMeal: result.rows[0]
+    });
+    } catch (err) {
     console.error("Error archiving meal:", err);
     return res.status(500).json({ error: "Server error archiving meal." });
   }
