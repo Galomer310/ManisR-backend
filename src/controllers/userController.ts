@@ -1,4 +1,3 @@
-// backend/src/controllers/userController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 
@@ -47,7 +46,7 @@ export const deleteUserAccount = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Delete user from database. You may need to delete associated data as well.
+    // Delete user from database. 
     await pool.query("DELETE FROM users WHERE id = $1", [userId]);
 
     return res.status(200).json({ message: "Account deleted successfully." });

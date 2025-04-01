@@ -1,4 +1,3 @@
-// backend/src/controllers/foodController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 import { io } from "../app"; 
@@ -245,7 +244,6 @@ export const reserveMeal = async (req: Request, res: Response) => {
 };
 /**
  * Taker finalizes collection of the meal: deletes the meal row & conversation.
- * => POST or DELETE /food/collect/:mealId
  */
 export const collectMeal = async (req: Request, res: Response) => {
   try {

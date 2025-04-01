@@ -1,4 +1,3 @@
-// backend/src/controllers/mealHistoryController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 import { io } from "../app";
@@ -35,7 +34,7 @@ export const archiveMeal = async (req: Request, res: Response) => {
       takerId,
       meal.item_description,
       meal.pickup_address,
-      meal.avatar_url // assuming the meal image is stored here
+      meal.avatar_url 
     ]);
     
     // Delete the meal conversation (if exists) and the meal itself.
@@ -105,7 +104,7 @@ export const softDeleteUsageHistory = async (req: Request, res: Response) => {
 
     await pool.query(updateQuery, values);
 
-    // Optional: If both flags are true, permanently delete the record.
+    //  If both flags are true, permanently delete the record.
     if (record.deleted_by_giver || record.deleted_by_taker) {
       // Re-check the record after update.
       const recheck = await pool.query("SELECT deleted_by_giver, deleted_by_taker FROM meal_history WHERE id = $1", [historyId]);

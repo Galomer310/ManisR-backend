@@ -1,4 +1,3 @@
-// backend/src/controllers/mealReviewsController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 

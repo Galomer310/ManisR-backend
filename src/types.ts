@@ -1,4 +1,3 @@
-// Example type definitions
 export interface User {
   id: number;
   name: string;
@@ -11,7 +10,7 @@ export interface User {
 
 export interface FoodItem {
   id: number;
-  user_id: number; // Giver's user ID
+  user_id: number; 
   item_description: string;
   pickup_address: string;
   box_option: "need" | "noNeed";

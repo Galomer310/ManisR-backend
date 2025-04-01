@@ -1,4 +1,3 @@
-// backend/src/controllers/authController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 import bcrypt from "bcrypt";

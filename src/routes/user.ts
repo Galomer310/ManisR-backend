@@ -1,4 +1,3 @@
-// backend/src/routes/user.ts
 import { Router } from "express";
 import { getUserProfile, updateAvatar, deleteUserAccount  } from "../controllers/userController";
 import { verifyJWT } from "../middlewares/authMiddleware";

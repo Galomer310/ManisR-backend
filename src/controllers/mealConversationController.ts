@@ -1,4 +1,3 @@
-// backend/src/controllers/mealConversationController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 
@@ -15,7 +14,6 @@ export const sendMealConversationMessage = async (req: Request, res: Response) =
       return res.status(400).json({ error: "All fields are required and must be valid." });
     }
 
-    // Now, if your foreign keys exist (meal 117, user 4, and user 3 exist) this should succeed.
     const queryText = `
       INSERT INTO meal_conversation 
         (meal_id, sender_id, receiver_id, message)

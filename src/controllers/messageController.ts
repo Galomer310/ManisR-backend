@@ -1,4 +1,3 @@
-// backend/src/controllers/messageController.ts
 import { Request, Response } from "express";
 import pool from "../config/database";
 

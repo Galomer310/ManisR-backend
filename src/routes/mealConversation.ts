@@ -1,4 +1,3 @@
-// backend/src/routes/mealConversation.ts
 import { Router } from "express";
 import {
   sendMealConversationMessage,

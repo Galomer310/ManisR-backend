@@ -1,4 +1,3 @@
-// backend/src/controllers/verifyEmailController.ts
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import pool from "../config/database";
