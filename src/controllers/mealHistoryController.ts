@@ -117,3 +117,29 @@ export const softDeleteUsageHistory = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Server error deleting history record." });
   }
 };
+/**
+ * Updates the review fields of a meal history record.
+ * Expects the meal history id as a URL parameter.
+ * The body may include:
+ *   - user_review (optional)
+ *   - general_experience (optional)
+ *   - comments (optional)
+ */
+export const updateMealHistoryReview = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params; // id of the meal_history record
+    const { user_review, general_experience, comments } = req.body;
+    
+    // No required fields check needed as these are optional.
+    await pool.query(
+      `UPDATE meal_history 
+       SET user_review = $1, general_experience = $2, comments = $3, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $4`,
+      [user_review || null, general_experience || null, comments || null, id]
+    );
+    return res.status(200).json({ message: "Review updated successfully." });
+  } catch (error) {
+    console.error("Error updating meal history review:", error);
+    return res.status(500).json({ error: "Server error updating review." });
+  }
+};
