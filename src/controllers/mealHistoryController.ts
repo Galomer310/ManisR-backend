@@ -25,7 +25,7 @@ export const archiveMeal = async (req: Request, res: Response) => {
       INSERT INTO meal_history (
         meal_id, giver_id, taker_id, item_description, pickup_address, meal_image, created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-      RETURNING id
+      RETURNING *
     `;
     const giverId = meal.user_id;
     const takerId = meal.taker_id;
@@ -35,21 +35,22 @@ export const archiveMeal = async (req: Request, res: Response) => {
       takerId,
       meal.item_description,
       meal.pickup_address,
-      meal.avatar_url // assuming the meal image is stored in this column
+      meal.avatar_url // assuming the meal image is stored here
     ]);
     
     // Delete the meal conversation (if exists) and the meal itself.
     await pool.query("DELETE FROM meal_conversation WHERE meal_id = $1", [mealId]);
     await pool.query("DELETE FROM food_items WHERE id = $1", [mealId]);
     
-    // Optionally, notify via socket.io.
-    io.emit("mealArchived", { mealId, historyId: result.rows[0].id });
+    // Notify via Socket.IO.
+    io.emit("mealArchived", { mealId, history: result.rows[0] });
     
+    // Return the archived meal record.
     return res.status(200).json({
       message: "Meal archived successfully.",
       archivedMeal: result.rows[0]
     });
-    } catch (err) {
+  } catch (err) {
     console.error("Error archiving meal:", err);
     return res.status(500).json({ error: "Server error archiving meal." });
   }

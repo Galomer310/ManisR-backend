@@ -2,17 +2,6 @@
 import { Request, Response } from "express";
 import pool from "../config/database";
 
-/**
- * Creates a new meal review.
- * Expects in the request body:
- *   - meal_id (number)
- *   - reviewer_id (number)
- *   - reviewee_id (number, optional)
- *   - role (string, 'taker' or 'giver')
- *   - user_review (integer, optional)
- *   - general_experience (integer, optional)
- *   - comments (text, optional)
- */
 export const createMealReview = async (req: Request, res: Response) => {
   try {
     const {
