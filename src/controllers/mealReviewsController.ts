@@ -36,3 +36,25 @@ export const createMealReview = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Server error creating review." });
   }
 };
+// GET /meal_reviews/giverCount/:userId
+export const getGiverMealsCount = async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid user ID." });
+    }
+    // Query the meal_reviews table to count how many times reviewer_id = userId AND role = 'giver'
+    const result = await pool.query(
+      `SELECT COUNT(*) as count
+       FROM meal_reviews
+       WHERE reviewer_id = $1
+         AND role = 'giver'`,
+      [userId]
+    );
+    const count = parseInt(result.rows[0].count, 10) || 0;
+    return res.status(200).json({ count });
+  } catch (error) {
+    console.error("Error fetching giver meal count:", error);
+    return res.status(500).json({ error: "Server error fetching giver meal count." });
+  }
+};

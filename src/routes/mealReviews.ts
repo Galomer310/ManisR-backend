@@ -1,11 +1,14 @@
 // backend/src/routes/mealReviews.ts
 import { Router } from "express";
-import { createMealReview } from "../controllers/mealReviewsController";
 import { verifyJWT } from "../middlewares/authMiddleware";
+import { createMealReview, getGiverMealsCount } from "../controllers/mealReviewsController";
 
 const router = Router();
 
-// Create a new meal review (protected)
+// Existing route
 router.post("/", verifyJWT, createMealReview);
+
+// New route
+router.get("/giverCount/:userId", verifyJWT, getGiverMealsCount);
 
 export default router;
