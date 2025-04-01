@@ -300,3 +300,24 @@ export const collectMeal = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Server error collecting meal." });
   }
 };
+
+export const updateMealStatus = async (req: Request, res: Response) => {
+  try {
+    const mealId = parseInt(req.params.mealId, 10);
+    const { status } = req.body;
+    if (!status) {
+      return res.status(400).json({ error: "Status is required." });
+    }
+    const result = await pool.query(
+      "UPDATE food_items SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *",
+      [status, mealId]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Meal not found." });
+    }
+    return res.status(200).json({ meal: result.rows[0] });
+  } catch (err) {
+    console.error("Error updating meal status:", err);
+    return res.status(500).json({ error: "Server error updating meal status." });
+  }
+};

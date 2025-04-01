@@ -12,6 +12,7 @@ import {
 } from "../controllers/foodController";
 import { verifyJWT } from "../middlewares/authMiddleware";
 import upload from "../middlewares/upload";
+import { updateMealStatus } from "../controllers/foodController";
 
 const router = Router();
 
@@ -37,5 +38,6 @@ router.get("/available", getAvailableFoodItems);
 router.get("/:id", getFoodItem);
 router.post("/reserve/:mealId", verifyJWT, reserveMeal);
 router.delete("/collect/:mealId", verifyJWT, collectMeal);
+router.put("/status/:mealId", verifyJWT, updateMealStatus);
 
 export default router;
