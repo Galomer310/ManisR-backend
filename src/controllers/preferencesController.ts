@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import pool from "../config/database";
-
 /**
  * Saves or updates user preferences.
  */
@@ -39,7 +38,6 @@ export const savePreferences = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Server error saving preferences." });
   }
 };
-
 /**
  * Retrieves preferences for a given user.
  */
@@ -57,5 +55,31 @@ export const getPreferences = async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Get preferences error:", err);
     return res.status(500).json({ error: "Server error retrieving preferences." });
+  }
+};
+/**
+ * Updates user preferences.
+ * This controller assumes that the user ID is passed as a URL parameter.
+ */
+export const updatePreferences = async (req: Request, res: Response) => {
+  try {
+    // Extract the fields to update from the request body.
+    const { phone, city, radius, foodPreference, allergies } = req.body;
+    // Get userId from URL parameters.
+    const { userId } = req.params;
+
+    if (!userId || !phone || !city || !radius || !foodPreference) {
+      return res.status(400).json({ error: "Missing required fields." });
+    }
+
+    await pool.query(
+      "UPDATE user_preferences SET phone = $1, city = $2, radius = $3, food_preference = $4, allergies = $5, updated_at = CURRENT_TIMESTAMP WHERE user_id = $6",
+      [phone, city, radius, foodPreference, allergies, userId]
+    );
+
+    return res.status(200).json({ message: "Preferences updated successfully." });
+  } catch (err) {
+    console.error("Update preferences error:", err);
+    return res.status(500).json({ error: "Server error updating preferences." });
   }
 };
