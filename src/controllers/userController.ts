@@ -39,3 +39,20 @@ export const updateAvatar = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Server error updating avatar" });
   }
 };
+
+export const deleteUserAccount = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId; // from verifyJWT middleware
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // Delete user from database. You may need to delete associated data as well.
+    await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+
+    return res.status(200).json({ message: "Account deleted successfully." });
+  } catch (err) {
+    console.error("Error deleting user account:", err);
+    return res.status(500).json({ error: "Server error deleting account." });
+  }
+};
