@@ -148,14 +148,12 @@ export const updateMealHistoryReview = async (req: Request, res: Response) => {
   }
 };
 
-// backend/src/controllers/mealHistoryController.ts
 export const getArchivedMealByMealId = async (req: Request, res: Response) => {
   try {
     const mealId = parseInt(req.params.mealId, 10);
     if (isNaN(mealId)) {
       return res.status(400).json({ error: "Invalid meal ID" });
     }
-    // Query meal_history using meal_id
     const result = await pool.query("SELECT * FROM meal_history WHERE meal_id = $1", [mealId]);
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Archived meal record not found" });
