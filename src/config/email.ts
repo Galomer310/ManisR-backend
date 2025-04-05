@@ -2,14 +2,14 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config({ path: "../.env" });
 
-// Create a transporter object using SMTP settings from your .env file.
+// Create a transporter object using SMTP settings from .env file.
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST, // e.g. smtp.gmail.com if using Gmail
+  host: process.env.SMTP_HOST, 
   port: Number(process.env.SMTP_PORT) || 587,
   secure: false, // false for TLS
   auth: {
-    user: process.env.SMTP_USER, // your email address
-    pass: process.env.SMTP_PASS, // your email password or app-specific password
+    user: process.env.SMTP_USER, 
+    pass: process.env.SMTP_PASS, 
   },
 });
 
@@ -30,7 +30,6 @@ export async function sendVerificationEmail(email: string, token: string) {
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log("Email sent:", info.messageId);
-    // If using a service like Ethereal for testing, you can log the preview URL:
     console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
     return info;
   } catch (error) {
