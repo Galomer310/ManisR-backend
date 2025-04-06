@@ -8,7 +8,7 @@ export const savePreferences = async (req: Request, res: Response) => {
     // Extract phone along with other fields
     const { userId, phone, city, radius, foodPreference, allergies } = req.body;
     
-    // Validate required fields (now including phone)
+    // Validate required fields 
     if (!userId || !phone || !city || !radius || !foodPreference) {
       return res.status(400).json({ error: "Missing required fields." });
     }
@@ -26,7 +26,6 @@ export const savePreferences = async (req: Request, res: Response) => {
         [phone, city, radius, foodPreference, allergies, userId]
       );
     } else {
-      // Insert new preferences, including the phone number.
       await pool.query(
         "INSERT INTO user_preferences (user_id, phone, city, radius, food_preference, allergies, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
         [userId, phone, city, radius, foodPreference, allergies]
@@ -59,13 +58,10 @@ export const getPreferences = async (req: Request, res: Response) => {
 };
 /**
  * Updates user preferences.
- * This controller assumes that the user ID is passed as a URL parameter.
  */
 export const updatePreferences = async (req: Request, res: Response) => {
   try {
-    // Extract the fields to update from the request body.
     const { phone, city, radius, foodPreference, allergies } = req.body;
-    // Get userId from URL parameters.
     const { userId } = req.params;
 
     if (!userId || !phone || !city || !radius || !foodPreference) {
