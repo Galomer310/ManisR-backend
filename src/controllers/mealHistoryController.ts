@@ -122,11 +122,6 @@ export const softDeleteUsageHistory = async (req: Request, res: Response) => {
 };
 /**
  * Updates the review fields of a meal history record.
- * Expects the meal history id as a URL parameter.
- * The body may include:
- *   - user_review (optional)
- *   - general_experience (optional)
- *   - comments (optional)
  */
 export const updateMealHistoryReview = async (req: Request, res: Response) => {
   try {

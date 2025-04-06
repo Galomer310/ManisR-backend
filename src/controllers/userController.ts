@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import pool from "../config/database";
 
-// GET /users/profile
+
 export const getUserProfile = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
